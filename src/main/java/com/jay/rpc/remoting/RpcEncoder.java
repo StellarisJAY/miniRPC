@@ -24,7 +24,7 @@ public class RpcEncoder implements ProtocolEncoder {
             out.writeLong(command.getTimeoutMillis());
             out.writeByte(command.getSerializer());
             out.writeByte(command.getCompressor());
-            out.writeByte(command.getCrc32());
+            out.writeInt(command.getCrc32());
             // 写入数据部分
             out.writeBytes(command.getContent());
         }

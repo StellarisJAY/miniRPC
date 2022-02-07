@@ -7,7 +7,7 @@ import lombok.ToString;
 
 /**
  * <p>
- *  Mini RPC Command
+ *  Mini RPC 报文
  *  +---------+----------+--------+------+-----------+-------------+------------+---------+
  *  |  proto  |  length  |  code  |  id  |  timeout  |  serialize  |  compress  |  crc32  |
  *  +---------+----------+--------+------+-----------+-------------+------------+---------+
@@ -22,7 +22,7 @@ import lombok.ToString;
  *  compress：压缩器编号，1 byte
  *  crc32：crc32校验码，4 byte
  *
- *  首部长度：25 bytes
+ *  首部长度：24 bytes
  *
  * </p>
  *

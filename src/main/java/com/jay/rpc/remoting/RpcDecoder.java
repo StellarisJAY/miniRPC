@@ -36,7 +36,7 @@ public class RpcDecoder implements ProtocolDecoder {
             byte compressor = in.readByte();
             int crc32 = in.readInt();
             // 检查数据部分长度
-            if(in.readableBytes() > length - RpcProtocol.HEADER_LENGTH){
+            if(in.readableBytes() >= length - RpcProtocol.HEADER_LENGTH){
                 // 读取数据部分
                 byte[] content = new byte[length - RpcProtocol.HEADER_LENGTH];
                 in.readBytes(content);
