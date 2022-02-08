@@ -23,12 +23,12 @@ public class MiniRpcProxy {
     /**
      * 创建代理对象
      * @param targetClass 目标接口
-     * @param produce producer名称
+     * @param groupName producer名称
      * @param serviceName 服务名
      * @param version 服务版本
      * @return 代理对象
      */
-    public Object createInstance(Class<?> targetClass, String produce, String serviceName, int version){
+    public static Object createInstance(Class<?> targetClass, String groupName, String serviceName, int version){
         return Proxy.newProxyInstance(MiniRpcProxy.class.getClassLoader(), new Class[]{targetClass}, (proxy, method, args) -> {
             // 创建request
             RpcRequest request = RpcRequest.builder().methodName(method.getName())
@@ -38,11 +38,15 @@ public class MiniRpcProxy {
                     .version(version)
                     .build();
             // 发送请求
-            RpcResponse response = CLIENT.sendRequest(produce, request);
+            RpcResponse response = CLIENT.sendRequest(groupName, request);
             if(response.getException() != null){
                 throw response.getException();
             }
             return response.getResult();
         });
+    }
+
+    public static void shutdown(){
+        CLIENT.shutdown();
     }
 }

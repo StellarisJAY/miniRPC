@@ -12,11 +12,23 @@ import com.jay.dove.transport.command.CommandFactory;
 import com.jay.dove.transport.command.RemotingCommand;
 import com.jay.dove.transport.connection.ConnectionManager;
 import com.jay.dove.transport.protocol.ProtocolManager;
+import com.jay.rpc.config.MiniRpcConfigs;
 import com.jay.rpc.entity.RpcRequest;
 import com.jay.rpc.entity.RpcResponse;
-import com.jay.rpc.remoting.*;
+import com.jay.rpc.loadbalance.LoadBalance;
+import com.jay.rpc.loadbalance.RandomLoadBalance;
+import com.jay.rpc.registry.LocalRegistry;
+import com.jay.rpc.registry.ProviderNode;
+import com.jay.rpc.registry.Registry;
+import com.jay.rpc.registry.redis.RedisRegistry;
+import com.jay.rpc.remoting.RpcCommandFactory;
+import com.jay.rpc.remoting.RpcConnectionFactory;
+import com.jay.rpc.remoting.RpcProtocol;
+import com.jay.rpc.remoting.RpcRemotingCommand;
 import com.jay.rpc.serialize.ProtostuffSerializer;
+import lombok.extern.slf4j.Slf4j;
 
+import java.util.List;
 import java.util.zip.CRC32;
 
 /**
@@ -27,6 +39,7 @@ import java.util.zip.CRC32;
  * @author Jay
  * @date 2022/02/07 11:47
  */
+@Slf4j
 public class MiniRpcClient {
     /**
      * DOVE网络客户端
@@ -36,6 +49,21 @@ public class MiniRpcClient {
      * Command工厂
      */
     private final CommandFactory commandFactory;
+    /**
+     * 本地注册中心缓存
+     */
+    private LocalRegistry localRegistry;
+    /**
+     * 远程注册中心客户端
+     */
+    private Registry registry;
+    /**
+     * 负载均衡器
+     */
+    private LoadBalance loadBalance;
+
+    private int maxConnections;
+
 
     public MiniRpcClient() {
         // 连接管理器
@@ -46,6 +74,26 @@ public class MiniRpcClient {
         ProtocolManager.registerProtocol(RpcProtocol.PROTOCOL_CODE, new RpcProtocol(new ClientSideCommandHandler(this.commandFactory)));
         // 注册序列化器
         SerializerManager.registerSerializer((byte)1, new ProtostuffSerializer());
+        init();
+    }
+
+    private void init(){
+        String registryType = MiniRpcConfigs.get("mini-rpc.registry.type");
+        String loadBalanceType = MiniRpcConfigs.get("mini-rpc.client.load-balance");
+        this.maxConnections = MiniRpcConfigs.getInt("mini-rpc.client.max-conn");
+        if("redis".equals(registryType)){
+            this.registry = new RedisRegistry();
+        }
+        // 初始化本地注册中心
+        this.localRegistry = new LocalRegistry(registry);
+        // 初始化远程注册中心客户端
+        this.registry.init();
+        this.registry.setLocalRegistry(localRegistry);
+
+        // 初始化负载均衡器
+        if("random".equals(loadBalanceType)){
+            this.loadBalance = new RandomLoadBalance();
+        }
     }
 
     /**
@@ -60,7 +108,8 @@ public class MiniRpcClient {
         RemotingCommand requestCommand = commandFactory.createRequest(request, RpcProtocol.REQUEST);
 
         // 获取producer地址
-        Url url = Url.parseString("127.0.0.1:9999?conn=10");
+        Url url = lookupProvider(producer);
+        url.setExpectedConnectionCount(maxConnections);
         // 发送请求，获得future
         InvokeFuture invokeFuture = client.sendFuture(url, requestCommand, null);
         // 等待结果
@@ -91,6 +140,12 @@ public class MiniRpcClient {
         }
     }
 
+    private Url lookupProvider(String groupName){
+        List<ProviderNode> providerNodes = registry.lookupProviders(groupName);
+        ProviderNode provider = loadBalance.select(providerNodes);
+        return Url.parseString(provider.getUrl());
+    }
+
     /**
      * 检查content的CRC32校验值
      * @param content byte[]
@@ -103,5 +158,9 @@ public class MiniRpcClient {
         crc.update(content, 0, content.length);
         int value = (int) crc.getValue();
         return value == crc32;
+    }
+
+    public void shutdown(){
+
     }
 }
