@@ -3,6 +3,8 @@ package com.jay.rpc.entity;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.io.Serializable;
+
 /**
  * <p>
  *  RPC Request
@@ -13,7 +15,8 @@ import lombok.Getter;
  */
 @Builder
 @Getter
-public class RpcRequest {
+public class RpcRequest implements Serializable {
+    private static final long serialVersionUID = 1L;
     /**
      * 服务名
      */
