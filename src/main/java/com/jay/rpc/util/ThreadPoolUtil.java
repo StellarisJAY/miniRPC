@@ -2,10 +2,7 @@ package com.jay.rpc.util;
 
 import com.jay.dove.util.NamedThreadFactory;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 /**
  * <p>
@@ -17,6 +14,9 @@ import java.util.concurrent.TimeUnit;
  * @date 2022/02/07 11:28
  */
 public class ThreadPoolUtil {
+
+    private static final ScheduledThreadPoolExecutor SCHEDULER = new ScheduledThreadPoolExecutor(2,
+            new NamedThreadFactory("scheduler-"));
 
     /**
      * 获取一个线程池
@@ -46,5 +46,13 @@ public class ThreadPoolUtil {
                 new LinkedBlockingQueue<>(),
                 new NamedThreadFactory(threadName),
                 new ThreadPoolExecutor.CallerRunsPolicy());
+    }
+
+    public static void schedule(Runnable task, long delay, TimeUnit timeUnit){
+        SCHEDULER.schedule(task, delay, timeUnit);
+    }
+
+    public static void scheduleAtFixedRate(Runnable task, long delay, long period, TimeUnit timeUnit){
+        SCHEDULER.scheduleAtFixedRate(task, delay, period, timeUnit);
     }
 }
