@@ -141,7 +141,8 @@ public class MiniRpcClient {
     }
 
     private Url lookupProvider(String groupName){
-        List<ProviderNode> providerNodes = registry.lookupProviders(groupName);
+        // 本地缓存获取provider
+        List<ProviderNode> providerNodes = localRegistry.lookUpProviders(groupName);
         ProviderNode provider = loadBalance.select(providerNodes);
         return Url.parseString(provider.getUrl());
     }
