@@ -111,12 +111,17 @@ public class HelloServiceImplV2 implements HelloService{
 - 版本号
 
 ```java
-// 调用 由 组hello-group中的服务器 提供的hello-service服务
-HelloService serviceV1 = (HelloService)MiniRpcProxy.createInstance(HelloService.class, "hello-group", "hello-service", 1);
-// 调用不同版本的服务
-HelloService serviceV2 = (HelloService)MiniRpcProxy.createInstance(HelloService.class, "hello-group", "hello-service", 2);
+public class Consumer {
+    @Test
+    public void test(){
+        // 调用 由 组hello-group中的服务器 提供的hello-service服务
+		HelloService serviceV1 = (HelloService)MiniRpcProxy.createInstance(HelloService.class, "hello-group", "hello-service", 1);
+		// 调用不同版本的服务
+		HelloService serviceV2 = (HelloService)MiniRpcProxy.createInstance(HelloService.class, "hello-group", "hello-service", 2);
 
-log.info("v1: {}", serviceV1.sayHello("world"));
-log.info("v2: {}", serviceV2.sayHello("world"));
+		log.info("v1: {}", serviceV1.sayHello("world"));
+		log.info("v2: {}", serviceV2.sayHello("world"));
+    }
+}
 ```
 
