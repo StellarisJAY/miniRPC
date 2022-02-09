@@ -20,10 +20,9 @@ public class LocalRegistry {
     /**
      * 远程注册中心客户端
      */
-    private final Registry remoteRegistry;
+    private Registry remoteRegistry;
 
-    public LocalRegistry(Registry remoteRegistry) {
-        this.remoteRegistry = remoteRegistry;
+    public LocalRegistry() {
     }
 
     /**
@@ -48,6 +47,10 @@ public class LocalRegistry {
         // 添加node
         Set<ProviderNode> providerNodes = registryCache.get(groupName);
         providerNodes.add(node);
+    }
+
+    public void setRemoteRegistry(Registry remoteRegistry){
+        this.remoteRegistry = remoteRegistry;
     }
 
 }
