@@ -10,12 +10,12 @@ Mini-RPC是SimpleRPC-NEW的升级版，使用自制的Dove框架开发，优化�
 
 RPC系统中共有三种角色，注册中心、服务提供者（**Provider**）、服务消费者（**Consumer**）。
 
-- **Provider**： 服务提供者，提供具体一种服务的实现类。
+- **Provider**： 服务提供者，提供具体一种服务的服务器。
 - **Group**：服务组，提供同一种服务的Provider组成的集群。消费者在调用服务时需要说明服务所在的组。
-- **Service**：服务，在Mini-RPC中服务以 Java 类为服务的载体，一个Java类就是一个服务。
-- **Version**：服务版本，服务可以有不同的版本，因此同一个服务可以由多个Java类实现多个版本。
+- **Service**：服务，在Mini-RPC中服务以 Java 类为载体，一个Java类就是一个服务。
+- **Version**：服务版本，服务可以有不同的版本，因此同一个服务可以对应多个Java类。
 - **Consumer**：服务消费者，通过RPC客户端调用远程服务。
-- **Registry**：注册中心，消费者通过注册中心了解服务提供者的地址。Mini-RPC支持三种注册中心，Redis、Zookeeper和Simple。其中Simple不依赖外部服务，它会将指定的Provider服务器作为注册中心。
+- **Registry**：注册中心，消费者通过注册中心了解服务提供者的地址。Mini-RPC支持三种注册中心，Redis、Zookeeper和Simple。其中Simple不依赖外部应用，它会将指定的Provider服务器作为注册中心。
 
 ### maven依赖
 
