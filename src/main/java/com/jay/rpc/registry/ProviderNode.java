@@ -18,6 +18,7 @@ import java.util.Objects;
 @AllArgsConstructor
 @ToString
 public class ProviderNode {
+    private String groupName;
     private String url;
     private int weight;
     private long lastHeartBeatTime;
