@@ -17,6 +17,8 @@
         <logback.version>1.2.10</logback.version>
         <protostuff.version>1.7.4</protostuff.version>
         <jedis.version>2.9.0</jedis.version>
+        <fastjson.version>1.2.70</fastjson.version>
+        <curator.version>2.7.0</curator.version>
     </properties>
 
     <dependencies>
@@ -69,14 +71,25 @@
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>
-            <version>1.2.70</version>
+            <version>${fastjson.version}</version>
         </dependency>
+
+        <!-- zookeeper client curator -->
+        <dependency>
+            <groupId>org.apache.curator</groupId>
+            <artifactId>curator-recipes</artifactId>
+            <version>${curator.version}</version>
+        </dependency>
+
+        <!-- testing-->
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
             <version>RELEASE</version>
             <scope>test</scope>
         </dependency>
+
+
     </dependencies>
 
 </project>
