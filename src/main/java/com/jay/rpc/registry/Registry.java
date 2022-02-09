@@ -3,6 +3,7 @@ package com.jay.rpc.registry;
 import com.jay.rpc.config.MiniRpcConfigs;
 import com.jay.rpc.util.ThreadPoolUtil;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -19,7 +20,7 @@ public interface Registry {
      * @param groupName 生产者集合名称
      * @return {@link List<ProviderNode>}
      */
-    List<ProviderNode> lookupProviders(String groupName);
+    Set<ProviderNode> lookupProviders(String groupName);
 
     /**
      * 生产者节点通过该方法将自己注册到注册中心
