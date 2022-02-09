@@ -55,4 +55,10 @@ public class ThreadPoolUtil {
     public static void scheduleAtFixedRate(Runnable task, long delay, long period, TimeUnit timeUnit){
         SCHEDULER.scheduleAtFixedRate(task, delay, period, timeUnit);
     }
+
+
+    public static ExecutorService newCachedThreadPool(String threadName){
+        return new ThreadPoolExecutor(0, Integer.MAX_VALUE, 0L, TimeUnit.MILLISECONDS, new SynchronousQueue<>(),
+                new NamedThreadFactory(threadName), new ThreadPoolExecutor.AbortPolicy());
+    }
 }
