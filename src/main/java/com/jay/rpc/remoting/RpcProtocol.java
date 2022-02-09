@@ -45,6 +45,10 @@ public class RpcProtocol implements Protocol {
      */
     public static final CommandCode TIMEOUT = new CommandCode((short)4);
 
+    public static final CommandCode LOOKUP = new CommandCode((short)5);
+
+    public static final CommandCode REGISTER = new CommandCode((short)6);
+
     /**
      * 协议解码器
      */
