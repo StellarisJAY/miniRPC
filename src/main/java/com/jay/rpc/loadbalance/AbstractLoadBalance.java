@@ -4,6 +4,7 @@ import com.jay.rpc.config.MiniRpcConfigs;
 import com.jay.rpc.registry.ProviderNode;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -16,7 +17,7 @@ import java.util.stream.Collectors;
  */
 public abstract class AbstractLoadBalance implements LoadBalance{
     @Override
-    public ProviderNode select(List<ProviderNode> providerNodes) {
+    public ProviderNode select(Set<ProviderNode> providerNodes) {
         // 过滤掉长期没有心跳的provider
         List<ProviderNode> list = providerNodes
                 .stream()

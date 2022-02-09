@@ -2,7 +2,7 @@ package com.jay.rpc.loadbalance;
 
 import com.jay.rpc.registry.ProviderNode;
 
-import java.util.List;
+import java.util.Set;
 
 /**
  * <p>
@@ -19,5 +19,5 @@ public interface LoadBalance {
      * @param providerNodes provider集合
      * @return {@link ProviderNode}
      */
-    ProviderNode select(List<ProviderNode> providerNodes);
+    ProviderNode select(Set<ProviderNode> providerNodes);
 }
