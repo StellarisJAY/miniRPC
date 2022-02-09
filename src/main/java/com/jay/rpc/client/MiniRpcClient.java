@@ -4,6 +4,7 @@ import com.jay.dove.DoveClient;
 import com.jay.dove.compress.Compressor;
 import com.jay.dove.compress.CompressorManager;
 import com.jay.dove.config.Configs;
+import com.jay.dove.config.DoveConfigs;
 import com.jay.dove.serialize.Serializer;
 import com.jay.dove.serialize.SerializerManager;
 import com.jay.dove.transport.Url;
@@ -20,7 +21,9 @@ import com.jay.rpc.loadbalance.RandomLoadBalance;
 import com.jay.rpc.registry.LocalRegistry;
 import com.jay.rpc.registry.ProviderNode;
 import com.jay.rpc.registry.Registry;
+import com.jay.rpc.registry.SimpleRegistry;
 import com.jay.rpc.registry.redis.RedisRegistry;
+import com.jay.rpc.registry.zk.ZookeeperRegistry;
 import com.jay.rpc.remoting.RpcCommandFactory;
 import com.jay.rpc.remoting.RpcConnectionFactory;
 import com.jay.rpc.remoting.RpcProtocol;
@@ -67,9 +70,14 @@ public class MiniRpcClient {
 
 
     public MiniRpcClient() {
+        // 启用SSL
+        if("true".equals(MiniRpcConfigs.get("mini-rpc.enable-ssl"))){
+            DoveConfigs.setEnableSsl(true);
+        }
         // 连接管理器
         ConnectionManager connectionManager = new ConnectionManager(new RpcConnectionFactory());
         this.commandFactory = new RpcCommandFactory();
+        this.localRegistry = new LocalRegistry();
         this.client = new DoveClient(connectionManager, commandFactory);
         // 注册协议
         ProtocolManager.registerProtocol(RpcProtocol.PROTOCOL_CODE, new RpcProtocol(new ClientSideCommandHandler(this.commandFactory)));
@@ -82,11 +90,16 @@ public class MiniRpcClient {
         String registryType = MiniRpcConfigs.get("mini-rpc.registry.type");
         String loadBalanceType = MiniRpcConfigs.get("mini-rpc.client.load-balance");
         this.maxConnections = MiniRpcConfigs.getInt("mini-rpc.client.max-conn");
+        // 创建远程注册中心客户端
         if("redis".equals(registryType)){
             this.registry = new RedisRegistry();
+        }else if("zookeeper".equals(registryType)){
+            this.registry = new ZookeeperRegistry();
+        }else{
+            this.registry = new SimpleRegistry(false, client, commandFactory);
         }
         // 初始化本地注册中心
-        this.localRegistry = new LocalRegistry(registry);
+        this.localRegistry.setRemoteRegistry(registry);
         // 初始化远程注册中心客户端
         this.registry.init();
         this.registry.setLocalRegistry(localRegistry);
