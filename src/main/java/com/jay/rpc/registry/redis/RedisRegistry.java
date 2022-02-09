@@ -5,17 +5,18 @@ import com.jay.rpc.config.MiniRpcConfigs;
 import com.jay.rpc.registry.LocalRegistry;
 import com.jay.rpc.registry.ProviderNode;
 import com.jay.rpc.registry.Registry;
+import com.jay.rpc.util.ThreadPoolUtil;
 import lombok.extern.slf4j.Slf4j;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPubSub;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.ExecutorService;
 
 /**
  * <p>
- *  Redis 注册中心
+ *  Redis 注册中心客户端
  * </p>
  *
  * @author Jay
@@ -25,14 +26,41 @@ import java.util.Map;
 public class RedisRegistry implements Registry {
     private JedisPool pool;
     private static final String KEY_PREFIX = "mini-rpc/";
+    private static final String SUBSCRIBE_PATTERN = "*";
 
+    /**
+     * 本地注册中心缓存
+     */
     private LocalRegistry localRegistry;
+
+    /**
+     * 订阅事件线程池
+     */
+    private final ExecutorService subscribeThreads = ThreadPoolUtil.newCachedThreadPool("redis-subscribe-");
 
     @Override
     public void init(){
         String host = MiniRpcConfigs.get("mini-rpc.registry.redis.host");
         int port = MiniRpcConfigs.getInt("mini-rpc.registry.redis.port");
         pool = new JedisPool(host, port);
+        // 开启一个线程，订阅Redis注册中心的服务注册topic
+        subscribeThreads.submit(()->{
+            log.info("注册中心事件订阅已开启，keys：mini-rpc/*/providers");
+            try(Jedis jedis = pool.getResource()){
+                jedis.psubscribe(new JedisPubSub() {
+                    @Override
+                    public void onPMessage(String pattern, String channel, String message) {
+
+                        if(localRegistry != null){
+                            // 解析message JSON
+                            ProviderNode node = JSON.parseObject(message, ProviderNode.class);
+                            // 注册到本地注册中心
+                            localRegistry.registerProvider(channel, node);
+                        }
+                    }
+                }, KEY_PREFIX + "*/providers");
+            }
+        });
     }
 
     @Override
@@ -41,8 +69,8 @@ public class RedisRegistry implements Registry {
     }
 
     @Override
-    public List<ProviderNode> lookupProviders(String groupName) {
-        List<ProviderNode> nodes = new ArrayList<>();
+    public Set<ProviderNode> lookupProviders(String groupName) {
+        Set<ProviderNode> nodes = new HashSet<>();
         try(Jedis jedis = pool.getResource()){
             // hash get all 获取该group的所有provider
             Map<String, String> map = jedis.hgetAll(KEY_PREFIX + groupName + "/providers");
@@ -51,16 +79,6 @@ public class RedisRegistry implements Registry {
                 ProviderNode node = JSON.parseObject(s, ProviderNode.class);
                 nodes.add(node);
             }
-//            // 订阅 groupName下Provider注册
-//            jedis.subscribe(new JedisPubSub() {
-//                @Override
-//                public void onMessage(String channel, String message) {
-//                    // 解析注册的Provider
-//                    ProviderNode node = JSON.parseObject(message, ProviderNode.class);
-//                    // 添加到本地缓存
-//                    localRegistry.registerProvider(groupName, node);
-//                }
-//            }, KEY_PREFIX + groupName + "/providers");
         }catch (Exception e){
             log.error("redis registry look up error: ", e);
         }
@@ -73,7 +91,7 @@ public class RedisRegistry implements Registry {
             String json = JSON.toJSONString(node);
             // hash添加providerNode信息，key为url，value为JSON
             jedis.hset(KEY_PREFIX + groupName + "/providers", node.getUrl(), json);
-            // publish register事件
+            // 发布注册事件
             jedis.publish(KEY_PREFIX + groupName + "/providers", json);
         }catch (Exception e){
             log.error("register provider failed , ", e);
