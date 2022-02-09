@@ -55,7 +55,8 @@ public class RedisRegistry implements Registry {
                             // 解析message JSON
                             ProviderNode node = JSON.parseObject(message, ProviderNode.class);
                             // 注册到本地注册中心
-                            localRegistry.registerProvider(channel, node);
+                            String[] parts = channel.split("/");
+                            localRegistry.registerProvider(parts[1], node);
                         }
                     }
                 }, KEY_PREFIX + "*/providers");
