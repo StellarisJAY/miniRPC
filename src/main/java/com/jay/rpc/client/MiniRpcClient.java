@@ -29,6 +29,7 @@ import com.jay.rpc.serialize.ProtostuffSerializer;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
+import java.util.Set;
 import java.util.zip.CRC32;
 
 /**
@@ -142,7 +143,7 @@ public class MiniRpcClient {
 
     private Url lookupProvider(String groupName){
         // 本地缓存获取provider
-        List<ProviderNode> providerNodes = localRegistry.lookUpProviders(groupName);
+        Set<ProviderNode> providerNodes = localRegistry.lookUpProviders(groupName);
         ProviderNode provider = loadBalance.select(providerNodes);
         return Url.parseString(provider.getUrl());
     }
