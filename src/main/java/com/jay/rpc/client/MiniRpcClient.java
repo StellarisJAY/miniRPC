@@ -28,6 +28,7 @@ import com.jay.rpc.remoting.RpcConnectionFactory;
 import com.jay.rpc.remoting.RpcProtocol;
 import com.jay.rpc.remoting.RpcRemotingCommand;
 import com.jay.rpc.serialize.ProtostuffSerializer;
+import com.jay.rpc.spi.ExtensionLoader;
 import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.StandardCharsets;
@@ -89,24 +90,22 @@ public class MiniRpcClient {
         String registryType = MiniRpcConfigs.registryType();
         String loadBalanceType = MiniRpcConfigs.loadBalanceType();
         this.maxConnections = MiniRpcConfigs.maxConnections();
-        // 创建远程注册中心客户端
-        if("redis".equals(registryType)){
-            this.registry = new RedisRegistry();
-        }else if("zookeeper".equals(registryType)){
-            this.registry = new ZookeeperRegistry();
+
+        if(!"simple".equalsIgnoreCase(registryType)){
+            ExtensionLoader<Registry> registryLoader = ExtensionLoader.getExtensionLoader(Registry.class);
+            this.registry = registryLoader.getExtension(registryType);
         }else{
             this.registry = new SimpleRegistry(false, client, commandFactory);
         }
+
         // 初始化本地注册中心
-        this.localRegistry.setRemoteRegistry(registry);
+        this.localRegistry.setRemoteRegistry(this.registry);
         // 初始化远程注册中心客户端
         this.registry.init();
         this.registry.setLocalRegistry(localRegistry);
-
-        // 初始化负载均衡器
-        if("random".equals(loadBalanceType)){
-            this.loadBalance = new RandomLoadBalance();
-        }
+        // 加载负载均衡器
+        ExtensionLoader<LoadBalance> loadBalanceLoader = ExtensionLoader.getExtensionLoader(LoadBalance.class);
+        this.loadBalance = loadBalanceLoader.getExtension(loadBalanceType);
     }
 
     /**

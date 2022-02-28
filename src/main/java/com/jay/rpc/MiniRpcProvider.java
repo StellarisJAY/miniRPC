@@ -21,6 +21,7 @@ import com.jay.rpc.remoting.*;
 import com.jay.rpc.serialize.ProtostuffSerializer;
 import com.jay.rpc.service.ServiceInfo;
 import com.jay.rpc.service.ServiceMapping;
+import com.jay.rpc.spi.ExtensionLoader;
 import com.jay.rpc.util.ThreadPoolUtil;
 import lombok.extern.slf4j.Slf4j;
 
@@ -79,14 +80,14 @@ public class MiniRpcProvider extends AbstractLifeCycle {
                 .weight(10)
                 .lastHeartBeatTime(System.currentTimeMillis())
                 .build();
-        // 根据类型创建注册中心
-        if("redis".equals(registryType)){
-            registry = new RedisRegistry();
-        }else if("zookeeper".equals(registryType)){
-            registry = new ZookeeperRegistry();
+
+        // 创建注册中心客户端
+        if(!"simple".equalsIgnoreCase(registryType)){
+            ExtensionLoader<Registry> registryLoader = ExtensionLoader.getExtensionLoader(Registry.class);
+            this.registry = registryLoader.getExtension(registryType);
         }else{
             boolean isRegistry = MiniRpcConfigs.providerAsRegistry();
-            registry = new SimpleRegistry(isRegistry,client, commandFactory);
+            this.registry = new SimpleRegistry(isRegistry, client, commandFactory);
         }
 
         this.localRegistry.setRemoteRegistry(registry);
