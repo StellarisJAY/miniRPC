@@ -1,0 +1,3 @@
+random=com.jay.rpc.loadbalance.RandomLoadBalance
+hash=com.jay.rpc.loadbalance.ConsistentHashLoadBalance
+round=com.jay.rpc.loadbalance.RoundRobinLoadBalance
