@@ -4,11 +4,9 @@ import com.alibaba.fastjson.JSON;
 import com.jay.dove.DoveClient;
 import com.jay.dove.transport.Url;
 import com.jay.dove.transport.command.CommandFactory;
-import com.jay.dove.transport.command.RemotingCommand;
 import com.jay.rpc.config.MiniRpcConfigs;
 import com.jay.rpc.remoting.RpcProtocol;
 import com.jay.rpc.remoting.RpcRemotingCommand;
-import io.protostuff.Rpc;
 import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.StandardCharsets;
@@ -53,8 +51,8 @@ public class SimpleRegistry implements Registry{
     public void init() {
         if(!isRegistry){
             // 加载Simple注册中心地址
-            String host = MiniRpcConfigs.get("mini-rpc.registry.simple.host");
-            int port = MiniRpcConfigs.getInt("mini-rpc.registry.simple.port");
+            String host = MiniRpcConfigs.simpleRegistryHost();
+            int port = MiniRpcConfigs.simpleRegistryPort();
             this.registryUrl = Url.parseString(host + ":" + port);
         }
     }

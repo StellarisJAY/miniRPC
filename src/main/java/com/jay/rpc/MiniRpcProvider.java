@@ -52,7 +52,7 @@ public class MiniRpcProvider extends AbstractLifeCycle {
 
     public MiniRpcProvider(String basePackage) {
         // 获取服务器端口
-        this.port = MiniRpcConfigs.getInt("mini-rpc.server.port");
+        this.port = MiniRpcConfigs.serverPort();
         this.commandFactory = new RpcCommandFactory();
         Codec miniRpcCodec = new MiniRpcCodec();
         this.serviceMapping = new ServiceMapping(basePackage);
@@ -63,7 +63,7 @@ public class MiniRpcProvider extends AbstractLifeCycle {
         this.localRegistry = new LocalRegistry();
         this.commandHandler = new MiniRpcCommandHandler(serviceMapping, commandFactory, localRegistry);
         // dove服务器启用SSL
-        if("true".equals(MiniRpcConfigs.get("mini-rpc.enable-ssl"))){
+        if(MiniRpcConfigs.enableSsl()){
             DoveConfigs.setEnableSsl(true);
         }
         this.server = new DoveServer(miniRpcCodec, port, commandFactory);
@@ -71,8 +71,8 @@ public class MiniRpcProvider extends AbstractLifeCycle {
     }
 
     private void init(){
-        String registryType = MiniRpcConfigs.get("mini-rpc.registry.type");
-        String groupName = MiniRpcConfigs.get("mini-rpc.provider.group");
+        String registryType = MiniRpcConfigs.registryType();
+        String groupName = MiniRpcConfigs.providerGroup();
         // 生成节点信息
         ProviderNode node = ProviderNode.builder()
                 .url("127.0.0.1:" + port)
@@ -85,7 +85,7 @@ public class MiniRpcProvider extends AbstractLifeCycle {
         }else if("zookeeper".equals(registryType)){
             registry = new ZookeeperRegistry();
         }else{
-            boolean isRegistry = Boolean.parseBoolean(MiniRpcConfigs.get("mini-rpc.registry.provider-as-registry"));
+            boolean isRegistry = MiniRpcConfigs.providerAsRegistry();
             registry = new SimpleRegistry(isRegistry,client, commandFactory);
         }
 

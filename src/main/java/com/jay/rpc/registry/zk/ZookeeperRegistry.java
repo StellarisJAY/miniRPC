@@ -80,10 +80,10 @@ public class ZookeeperRegistry implements Registry {
     @Override
     public void init() {
         // 加载ZK options
-        String host = MiniRpcConfigs.get("mini-rpc.registry.zookeeper.host");
-        int port = MiniRpcConfigs.getInt("mini-rpc.registry.zookeeper.port");
-        int sessionTimeout = MiniRpcConfigs.getInt("mini-rpc.registry.zookeeper.session-timeout");
-        int connectionTimeout = MiniRpcConfigs.getInt("mini-rpc.registry.zookeeper.connection-timeout");
+        String host = MiniRpcConfigs.zookeeperHost();
+        int port = MiniRpcConfigs.zookeeperPort();
+        int sessionTimeout = MiniRpcConfigs.ZOOKEEPER_SESSION_TIMEOUT;
+        int connectionTimeout = MiniRpcConfigs.ZOOKEEPER_CONNECTION_TIMEOUT;
         long start = System.currentTimeMillis();
         // 创建curator客户端
         client = CuratorFrameworkFactory.newClient(host + ":" + port, sessionTimeout, connectionTimeout, new RetryOneTime(1000));

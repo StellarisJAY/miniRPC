@@ -3,7 +3,6 @@ package com.jay.rpc.client;
 import com.jay.dove.DoveClient;
 import com.jay.dove.compress.Compressor;
 import com.jay.dove.compress.CompressorManager;
-import com.jay.dove.config.Configs;
 import com.jay.dove.config.DoveConfigs;
 import com.jay.dove.serialize.Serializer;
 import com.jay.dove.serialize.SerializerManager;
@@ -31,7 +30,7 @@ import com.jay.rpc.remoting.RpcRemotingCommand;
 import com.jay.rpc.serialize.ProtostuffSerializer;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.List;
+import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import java.util.zip.CRC32;
 
@@ -71,7 +70,7 @@ public class MiniRpcClient {
 
     public MiniRpcClient() {
         // 启用SSL
-        if("true".equals(MiniRpcConfigs.get("mini-rpc.enable-ssl"))){
+        if(MiniRpcConfigs.enableSsl()){
             DoveConfigs.setEnableSsl(true);
         }
         // 连接管理器
@@ -87,9 +86,9 @@ public class MiniRpcClient {
     }
 
     private void init(){
-        String registryType = MiniRpcConfigs.get("mini-rpc.registry.type");
-        String loadBalanceType = MiniRpcConfigs.get("mini-rpc.client.load-balance");
-        this.maxConnections = MiniRpcConfigs.getInt("mini-rpc.client.max-conn");
+        String registryType = MiniRpcConfigs.registryType();
+        String loadBalanceType = MiniRpcConfigs.loadBalanceType();
+        this.maxConnections = MiniRpcConfigs.maxConnections();
         // 创建远程注册中心客户端
         if("redis".equals(registryType)){
             this.registry = new RedisRegistry();
@@ -150,7 +149,7 @@ public class MiniRpcClient {
             }
         }else{
             // response 为 TIMEOUT 或 ERROR
-            throw new RuntimeException(new String(responseCommand.getContent(), Configs.DEFAULT_CHARSET));
+            throw new RuntimeException(new String(responseCommand.getContent(), StandardCharsets.UTF_8));
         }
     }
 

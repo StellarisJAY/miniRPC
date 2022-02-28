@@ -40,8 +40,8 @@ public class RedisRegistry implements Registry {
 
     @Override
     public void init(){
-        String host = MiniRpcConfigs.get("mini-rpc.registry.redis.host");
-        int port = MiniRpcConfigs.getInt("mini-rpc.registry.redis.port");
+        String host = MiniRpcConfigs.redisHost();
+        int port = MiniRpcConfigs.redisPort();
         pool = new JedisPool(host, port);
         // 开启一个线程，订阅Redis注册中心的服务注册topic
         subscribeThreads.submit(()->{
