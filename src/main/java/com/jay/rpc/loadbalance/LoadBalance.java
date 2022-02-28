@@ -1,6 +1,7 @@
 package com.jay.rpc.loadbalance;
 
 import com.jay.rpc.registry.ProviderNode;
+import com.jay.rpc.spi.SPI;
 
 import java.util.Set;
 
@@ -12,6 +13,7 @@ import java.util.Set;
  * @author Jay
  * @date 2022/02/08 13:19
  */
+@SPI
 public interface LoadBalance {
 
     /**

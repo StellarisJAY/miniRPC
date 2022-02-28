@@ -1,6 +1,7 @@
 package com.jay.rpc.registry;
 
 import com.jay.rpc.config.MiniRpcConfigs;
+import com.jay.rpc.spi.SPI;
 import com.jay.rpc.util.ThreadPoolUtil;
 import java.util.List;
 import java.util.Set;
@@ -14,6 +15,7 @@ import java.util.concurrent.TimeUnit;
  * @author Jay
  * @date 2022/02/07 14:31
  */
+@SPI
 public interface Registry {
     /**
      * 从远程注册中心拉取该名称的生产者节点集合
