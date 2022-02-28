@@ -2,11 +2,9 @@ package com.jay.rpc.remoting;
 
 import com.jay.dove.transport.HeartBeatTrigger;
 import com.jay.dove.transport.command.CommandCode;
+import com.jay.dove.transport.command.CommandFactory;
 import com.jay.dove.transport.command.CommandHandler;
-import com.jay.dove.transport.protocol.Protocol;
-import com.jay.dove.transport.protocol.ProtocolCode;
-import com.jay.dove.transport.protocol.ProtocolDecoder;
-import com.jay.dove.transport.protocol.ProtocolEncoder;
+import com.jay.dove.transport.protocol.*;
 
 /**
  * <p>
@@ -73,6 +71,11 @@ public class RpcProtocol implements Protocol {
     }
 
     @Override
+    public ProtocolM2mEncoder getM2mEncoder() {
+        return null;
+    }
+
+    @Override
     public ProtocolDecoder getDecoder() {
         return decoder;
     }
@@ -90,5 +93,10 @@ public class RpcProtocol implements Protocol {
     @Override
     public HeartBeatTrigger getHeartBeatTrigger() {
         return null;
+    }
+
+    @Override
+    public CommandFactory getCommandFactory() {
+        return new RpcCommandFactory();
     }
 }
