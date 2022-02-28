@@ -1,0 +1,2 @@
+zookeeper=com.jay.rpc.registry.zk.ZooKeeperRegistry
+redis=com.jay.rpc.registry.redis.RedisRegistry
