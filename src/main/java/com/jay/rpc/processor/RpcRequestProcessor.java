@@ -15,6 +15,7 @@ import com.jay.rpc.service.ServiceInfo;
 import com.jay.rpc.service.ServiceInstance;
 import com.jay.rpc.service.ServiceMapping;
 import io.netty.channel.ChannelHandlerContext;
+import io.prometheus.client.Gauge;
 import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.InvocationTargetException;
@@ -40,6 +41,16 @@ public class RpcRequestProcessor extends AbstractProcessor {
      */
     private final ServiceMapping serviceMapping;
 
+    private static final Gauge IN_PROGRESS_REQUESTS = Gauge.build()
+            .name("rpc_in_progress_requests")
+            .help("get in progress rpc requests count")
+            .register();
+
+    private static final Gauge TOTAL_REQUESTS = Gauge.build()
+            .name("rpc_total_requests")
+            .help("get total request count since start")
+            .register();
+
     public RpcRequestProcessor(CommandFactory commandFactory, ServiceMapping serviceMapping) {
         this.commandFactory = commandFactory;
         this.serviceMapping = serviceMapping;
@@ -48,6 +59,8 @@ public class RpcRequestProcessor extends AbstractProcessor {
     @Override
     public void process(ChannelHandlerContext channelHandlerContext, Object in) {
         if(in instanceof RpcRemotingCommand){
+            IN_PROGRESS_REQUESTS.inc();
+            TOTAL_REQUESTS.inc();
             RpcRemotingCommand command = (RpcRemotingCommand) in;
             RemotingCommand responseCommand = null;
             try{
@@ -80,6 +93,7 @@ public class RpcRequestProcessor extends AbstractProcessor {
             }finally {
                 // 发送response
                 sendResponse(channelHandlerContext, responseCommand);
+                IN_PROGRESS_REQUESTS.dec();
             }
 
         }
