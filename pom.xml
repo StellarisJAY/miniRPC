@@ -19,6 +19,7 @@
         <jedis.version>2.9.0</jedis.version>
         <fastjson.version>1.2.70</fastjson.version>
         <curator.version>2.7.0</curator.version>
+        <prometheus.version>0.9.0</prometheus.version>
     </properties>
 
     <dependencies>
@@ -87,6 +88,24 @@
             <artifactId>testng</artifactId>
             <version>RELEASE</version>
             <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.prometheus</groupId>
+            <artifactId>simpleclient</artifactId>
+            <version>${prometheus.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.prometheus</groupId>
+            <artifactId>simpleclient_hotspot</artifactId>
+            <version>${prometheus.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.prometheus</groupId>
+            <artifactId>simpleclient_httpserver</artifactId>
+            <version>${prometheus.version}</version>
         </dependency>
 
 
