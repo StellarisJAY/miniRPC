@@ -1,2 +1,2 @@
-zookeeper=com.jay.rpc.registry.zk.ZooKeeperRegistry
+zookeeper=com.jay.rpc.registry.zk.ZookeeperRegistry
 redis=com.jay.rpc.registry.redis.RedisRegistry
