@@ -45,6 +45,9 @@ public class MiniRpcConfigs {
     public static final int ZOOKEEPER_SESSION_TIMEOUT = 3;
     public static final int ZOOKEEPER_CONNECTION_TIMEOUT = 3;
 
+    private static final String PROMETHEUS_SERVER_PORT = "mini-rpc.prometheus.port";
+    private static final int DEFAULT_PROMETHEUS_PORT = 9898;
+
     /**
      * 注册超时时间，60s
      */
@@ -100,5 +103,9 @@ public class MiniRpcConfigs {
 
     public static int zookeeperPort(){
         return ConfigsManager.getInt(ZOOKEEPER_PORT, DEFAULT_ZOOKEEPER_PORT);
+    }
+
+    public static int prometheusServerPort(){
+        return ConfigsManager.getInt(PROMETHEUS_SERVER_PORT, DEFAULT_PROMETHEUS_PORT);
     }
 }
