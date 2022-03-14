@@ -27,25 +27,27 @@ public class LocalRegistry {
 
     /**
      * 查询Provider
-     * @param groupName group
+     * @param serviceName 服务名称
+     * @param version 服务版本号
      * @return {@link Set<ProviderNode>}
      */
-    public Set<ProviderNode> lookUpProviders(String groupName){
+    public Set<ProviderNode> lookUpProviders(String serviceName, int version){
         // 如果本地Registry缓存没有，就从远程Registry拉取
-        registryCache.computeIfAbsent(groupName, (key)-> remoteRegistry.lookupProviders(groupName));
-        return registryCache.get(groupName);
+        registryCache.computeIfAbsent(serviceName + "-" + version, (key)-> remoteRegistry.lookupProviders(serviceName, version));
+        return registryCache.get(serviceName + "-" + version);
     }
 
     /**
      * 在本地注册中心注册Provider
-     * @param groupName group
+     * @param serviceName 服务名称
+     * @param version 服务版本号
      * @param node {@link ProviderNode}
      */
-    public void registerProvider(String groupName, ProviderNode node){
+    public void registerProvider(String serviceName, int version, ProviderNode node){
         // 创建Set
-        registryCache.computeIfAbsent(groupName, k-> new HashSet<>());
+        registryCache.computeIfAbsent(serviceName + "-" + version, k-> new HashSet<>());
         // 添加node
-        Set<ProviderNode> providerNodes = registryCache.get(groupName);
+        Set<ProviderNode> providerNodes = registryCache.get(serviceName + "-" + version);
         providerNodes.add(node);
     }
 
