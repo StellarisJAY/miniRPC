@@ -11,7 +11,6 @@ Mini-RPC是SimpleRPC-NEW的升级版，使用自制的Dove框架开发，优化�
 RPC系统中共有三种角色，注册中心、服务提供者（**Provider**）、服务消费者（**Consumer**）。
 
 - **Provider**： 服务提供者，提供具体一种服务的服务器。
-- **Group**：服务组，提供同一种服务的Provider组成的集群。消费者在调用服务时需要说明服务所在的组。
 - **Service**：服务，在Mini-RPC中服务以 Java 类为载体，一个Java类就是一个服务。
 - **Version**：服务版本，服务可以有不同的版本，因此同一个服务可以对应多个Java类。
 - **Consumer**：服务消费者，通过RPC客户端调用远程服务。
@@ -106,7 +105,6 @@ public class HelloServiceImplV2 implements HelloService{
 使用MiniRpcProxy的createInstance方法创建RPC代理对象。方法参数列表如下：
 
 - 服务接口类
-- Provider所属group
 - 服务名称
 - 版本号
 
@@ -115,12 +113,85 @@ public class Consumer {
     @Test
     public void test(){
         // 调用 由 组hello-group中的服务器 提供的hello-service服务
-		HelloService serviceV1 = (HelloService)MiniRpcProxy.createInstance(HelloService.class, "hello-group", "hello-service", 1);
+		HelloService serviceV1 = (HelloService)MiniRpcProxy.createInstance(HelloService.class, "hello-service", 1);
 		// 调用不同版本的服务
-		HelloService serviceV2 = (HelloService)MiniRpcProxy.createInstance(HelloService.class, "hello-group", "hello-service", 2);
+		HelloService serviceV2 = (HelloService)MiniRpcProxy.createInstance(HelloService.class, "hello-service", 2);
 
 		log.info("v1: {}", serviceV1.sayHello("world"));
 		log.info("v2: {}", serviceV2.sayHello("world"));
+    }
+}
+```
+
+## Client注册中心缓存
+
+服务列表会被Consumer客户端缓存，Mini-RPC使用发布订阅的方式保证缓存一致性。
+
+## Zookeeper注册中心
+
+Mini-RPC支持使用Zookeeper作为注册中心，具体的路径格式如下表所示：
+
+| Path                                           | 作用                                     |
+| ---------------------------------------------- | ---------------------------------------- |
+| /mini-rpc/services/{{ServiceName}}/{{version}} | 服务根目录                               |
+| 服务根目录/{{address}}                         | 服务Provider节点，data为Provider信息JSON |
+
+
+
+Mini-RPC使用**CuratorFramework**的**TreeCacheListener**来监听Zookeeper注册中心节点的改变，以此来更新Consumer本地缓存。
+
+
+
+## Redis注册中心
+
+Mini-RPC支持使用Redis作为注册中心，Key-Value格式如下表所示：
+
+| Key                                           | Value                                |
+| --------------------------------------------- | ------------------------------------ |
+| mini-rpc/services/{{serviceName}}/{{version}} | Hash，key是Provider地址，Value是JSON |
+
+Mini-RPC使用Redis的**PSUBSCRIBE**来订阅服务列表的改变。
+
+## SPI
+
+Mini-RPC仿照Dubbo实现了SPI机制来加载扩展类。按照以下步骤即可实现SPI：
+
+1. 编写SPI接口，并添加@SPI注解
+2. 在META-INF/extensions目录下添加名称为扩展接口的文件
+3. 编写SPI扩展类，并在扩展文件中添加名称与类名映射
+4. 使用ExtensionLoader加载扩展类
+
+```properties
+extension1 = com.jay.test.extension.MyExtension1
+```
+
+```java
+@SPI
+public interface MyExtension {
+    void hello();
+}
+```
+
+```java
+public class MyExtension1 implements MyExtension {
+    @Override
+    public void hello(){
+        System.out.println("hello");
+    }
+}
+```
+
+```java
+public class MyTest {
+    
+    @Test
+    public void testExtension(){
+        // 获取ExtensionLoader
+        ExtensionLoader<MyExtension> extensionLoader = 	ExtensionLoader.getExtensionLoader(MyExtension.class);
+        // 获取Extension
+		MyExtension ext1 = extensionLoader.getExtension("ext1");
+        
+        ext1.hello();
     }
 }
 ```
