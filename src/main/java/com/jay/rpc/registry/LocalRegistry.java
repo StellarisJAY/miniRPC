@@ -1,5 +1,7 @@
 package com.jay.rpc.registry;
 
+import io.netty.util.internal.StringUtil;
+
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -55,4 +57,20 @@ public class LocalRegistry {
         this.remoteRegistry = remoteRegistry;
     }
 
+    /**
+     * 本地注册中心标记Provider下线
+     * @param url Provider Url
+     * @param serviceName 下线serviceNam
+     * @param version 下线服务版本
+     */
+    public void onProviderOffline(String url, String serviceName, int version){
+        if(!StringUtil.isNullOrEmpty(url) && !StringUtil.isNullOrEmpty(serviceName)){
+            String service = serviceName + "-" + version;
+            registryCache.computeIfPresent(service, (k,v)->{
+                ProviderNode node = ProviderNode.builder().url(url).build();
+                v.remove(node);
+                return v;
+            });
+        }
+    }
 }
