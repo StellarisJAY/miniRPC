@@ -1,5 +1,7 @@
 package com.jay.rpc.service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -37,5 +39,9 @@ public class ServiceMapping {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public List<ServiceInfo> listServices(){
+        return new ArrayList<>(serviceMap.keySet());
     }
 }
