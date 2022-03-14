@@ -5,13 +5,15 @@ import com.jay.rpc.config.MiniRpcConfigs;
 import com.jay.rpc.registry.LocalRegistry;
 import com.jay.rpc.registry.ProviderNode;
 import com.jay.rpc.registry.Registry;
+import com.jay.rpc.service.ServiceInfo;
+import io.netty.util.internal.StringUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.framework.recipes.cache.TreeCache;
 import org.apache.curator.retry.RetryOneTime;
 import org.apache.zookeeper.CreateMode;
 
-import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -19,6 +21,12 @@ import java.util.Set;
 /**
  * <p>
  *  Zookeeper注册中心客户端
+ *  服务注册格式：
+ *  path: /mini-rpc/services/{serviceName}/{version}/{url}
+ *  data: JSON(ProviderNode)
+ *
+ *  订阅服务：
+ *  watch: /mini-rpc/services
  * </p>
  *
  * @author Jay
@@ -38,42 +46,39 @@ public class ZookeeperRegistry implements Registry {
     /**
      * Zookeeper 节点根路径
      */
-    public static final String ROOT_PATH = "/mini-rpc/";
+    public static final String ROOT_PATH = "/mini-rpc/services";
 
     @Override
-    public Set<ProviderNode> lookupProviders(String groupName) {
+    public Set<ProviderNode> lookupProviders(String serviceName, int version) {
+        String path = getPath(serviceName, version);
         Set<ProviderNode> result = new HashSet<>();
-        try{
-            // ls 目录下的所有节点，路径：/mini-rpc/{groupName}/providers/
-            List<String> children = client.getChildren().forPath(ROOT_PATH + groupName + "/providers/");
-            // 获取每个节点信息
-            for(String path : children){
-                byte[] data = client.getData().forPath(path);
-                String json = new String(data, StandardCharsets.UTF_8);
-                // 反序列化JSON字符串
+        try {
+            List<String> children = client.getChildren().forPath(path);
+            for (String child : children) {
+                String childPath = path + "/" + child;
+                byte[] data = client.getData().forPath(childPath);
+                String json = new String(data, MiniRpcConfigs.DEFAULT_CHARSET);
                 ProviderNode node = JSON.parseObject(json, ProviderNode.class);
                 result.add(node);
             }
         }catch (Exception e){
-            log.error("look up provider error ", e);
+            log.error("Look up service error, service: {}_{}", serviceName, version, e);
         }
         return result;
     }
 
     @Override
-    public void registerProvider(String groupName, ProviderNode node)  {
-        try{
-            /*
-                路径：/mini-rpc/{groupName}/providers/{url}
-                数据：JSON(ProviderNode)
-                类型：-e
-             */
-            String path = client.create().creatingParentsIfNeeded()
-                    .withMode(CreateMode.EPHEMERAL)
-                    .forPath(ROOT_PATH + groupName + "/providers/" + node.getUrl(),
-                            JSON.toJSONString(node).getBytes(StandardCharsets.UTF_8));
-        }catch (Exception e){
-            log.error("register failed, cause: ", e);
+    public void registerProvider(List<ServiceInfo> services, ProviderNode node) {
+        String json = JSON.toJSONString(node);
+        byte[] data = json.getBytes(MiniRpcConfigs.DEFAULT_CHARSET);
+        String url = node.getUrl();
+        for (ServiceInfo service : services) {
+            try{
+                client.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL)
+                        .forPath(getPath(service.getServiceName(), service.getVersion()) + "/" + url, data);
+            }catch (Exception e){
+                log.error("Register Provider Error, Service: {}_{}", service.getServiceName(), service.getVersion(), e);
+            }
         }
     }
 
@@ -90,10 +95,78 @@ public class ZookeeperRegistry implements Registry {
         // 启动客户端
         client.start();
         log.info("Zookeeper 注册中心客户端启动完成，用时：{}ms", (System.currentTimeMillis() - start));
+        try{
+            // 开启TreeCache，监听Node变化
+            TreeCache treeCache = TreeCache.newBuilder(client, ROOT_PATH)
+                    .setCacheData(true)
+                    .build();
+            treeCache.getListenable().addListener(new RegistryListener());
+            treeCache.start();
+        }catch (Exception e){
+            log.error("Start TreeCache Failed ", e);
+        }
+    }
+
+    @Override
+    public void heatBeat(List<ServiceInfo> services, ProviderNode node) {
+
     }
 
     @Override
     public void setLocalRegistry(LocalRegistry localRegistry) {
         this.localRegistry = localRegistry;
     }
+
+
+    class RegistryListener extends AbstractTreeCacheListener{
+
+        @Override
+        public void onNodeDataChanged(String path, byte[] data) {
+
+        }
+
+        @Override
+        public void onNodeCreated(String path, byte[] data) {
+            if(!StringUtil.isNullOrEmpty(path) && data != null && data.length > 0){
+                ServiceInfo serviceInfo = getServiceInfo(path);
+                if(serviceInfo != null){
+                    // 注册新的Provider到本地Registry
+                    String json = new String(data, MiniRpcConfigs.DEFAULT_CHARSET);
+                    ProviderNode node = JSON.parseObject(json, ProviderNode.class);
+                    localRegistry.registerProvider(serviceInfo.getServiceName(), serviceInfo.getVersion(), node);
+                }
+            }
+
+        }
+
+        @Override
+        public void onNodeDeleted(String path)  {
+            ServiceInfo serviceInfo = getServiceInfo(path);
+            if(serviceInfo != null){
+                // node被删除，Provider下线
+                localRegistry.onProviderOffline(getUrl(path), serviceInfo.getServiceName(), serviceInfo.getVersion());
+            }
+        }
+        private ServiceInfo getServiceInfo(String path){
+            int idx = path.indexOf(ROOT_PATH);
+            if(idx != -1) {
+                String substring = path.substring(idx + ROOT_PATH.length() + 2);
+                String[] parts = substring.split("/");
+                String serviceName = parts[0];
+                int version = Integer.parseInt(parts[1]);
+                return new ServiceInfo(serviceName, version);
+            }
+            return null;
+        }
+
+        private String getUrl(String path){
+            int i = path.lastIndexOf("/");
+            return path.substring(i + 1);
+        }
+    }
+
+    private String getPath(String serviceName, int version){
+        return ROOT_PATH + "/" + serviceName + "/" + version;
+    }
+
 }
