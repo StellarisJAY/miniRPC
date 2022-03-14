@@ -99,6 +99,12 @@ public class RedisRegistry implements Registry {
     }
 
     @Override
+    public void heatBeat(List<ServiceInfo> services, ProviderNode node) {
+        node.setLastHeartBeatTime(System.currentTimeMillis());
+        registerProvider(services, node);
+    }
+
+    @Override
     public void setLocalRegistry(LocalRegistry localRegistry) {
         this.localRegistry = localRegistry;
     }
