@@ -1,5 +1,8 @@
 package com.jay.rpc.config;
 
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+
 /**
  * <p>
  *  Configs
@@ -40,11 +43,13 @@ public class MiniRpcConfigs {
     private static final String ZOOKEEPER_PORT = "mini-rpc.registry.zookeeper.port";
     private static final int DEFAULT_ZOOKEEPER_PORT = 2187;
 
-    public static final int ZOOKEEPER_SESSION_TIMEOUT = 3;
-    public static final int ZOOKEEPER_CONNECTION_TIMEOUT = 3;
+    public static final int ZOOKEEPER_SESSION_TIMEOUT = 3000;
+    public static final int ZOOKEEPER_CONNECTION_TIMEOUT = 3000;
 
     private static final String PROMETHEUS_SERVER_PORT = "mini-rpc.prometheus.port";
     private static final int DEFAULT_PROMETHEUS_PORT = 9898;
+
+    public static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
 
     /**
      * 注册超时时间，60s
