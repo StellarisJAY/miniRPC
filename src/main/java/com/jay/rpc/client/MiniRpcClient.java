@@ -114,8 +114,8 @@ public class MiniRpcClient {
      * @throws InterruptedException e
      */
     public RpcResponse sendRequest(String serviceName, int version, RpcRequest request) throws InterruptedException {
-        // 创建请求报文
-        RemotingCommand requestCommand = commandFactory.createRequest(request, RpcProtocol.REQUEST);
+        // 创建请求报文，command工厂序列化
+        RemotingCommand requestCommand = commandFactory.createRequest(request, RpcProtocol.REQUEST, RpcRequest.class);
 
         // 获取producer地址
         Url url = lookupProvider(serviceName, version);
