@@ -46,9 +46,16 @@ public interface Registry {
     default void startHeartBeat(List<ServiceInfo> services, ProviderNode node){
         ThreadPoolUtil.scheduleAtFixedRate(()->{
             node.setLastHeartBeatTime(System.currentTimeMillis());
-            registerProvider(services, node);
+            heatBeat(services, node);
         }, MiniRpcConfigs.REGISTER_TIMEOUT / 2, MiniRpcConfigs.REGISTER_TIMEOUT / 2, TimeUnit.MILLISECONDS);
     }
+
+    /**
+     * 心跳
+     * @param services 服务列表
+     * @param node 提供者信息
+     */
+    void heatBeat(List<ServiceInfo> services, ProviderNode node);
 
     /**
      * 设置本地注册中心
