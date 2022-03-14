@@ -16,13 +16,10 @@ import com.jay.rpc.config.MiniRpcConfigs;
 import com.jay.rpc.entity.RpcRequest;
 import com.jay.rpc.entity.RpcResponse;
 import com.jay.rpc.loadbalance.LoadBalance;
-import com.jay.rpc.loadbalance.RandomLoadBalance;
 import com.jay.rpc.registry.LocalRegistry;
 import com.jay.rpc.registry.ProviderNode;
 import com.jay.rpc.registry.Registry;
 import com.jay.rpc.registry.SimpleRegistry;
-import com.jay.rpc.registry.redis.RedisRegistry;
-import com.jay.rpc.registry.zk.ZookeeperRegistry;
 import com.jay.rpc.remoting.RpcCommandFactory;
 import com.jay.rpc.remoting.RpcConnectionFactory;
 import com.jay.rpc.remoting.RpcProtocol;
@@ -91,7 +88,7 @@ public class MiniRpcClient {
         String loadBalanceType = MiniRpcConfigs.loadBalanceType();
         this.maxConnections = MiniRpcConfigs.maxConnections();
 
-        if(!"simple".equalsIgnoreCase(registryType)){
+        if(!MiniRpcConfigs.SIMPLE_REGISTRY.equals(registryType)){
             ExtensionLoader<Registry> registryLoader = ExtensionLoader.getExtensionLoader(Registry.class);
             this.registry = registryLoader.getExtension(registryType);
         }else{
@@ -110,17 +107,18 @@ public class MiniRpcClient {
 
     /**
      * 发送请求
-     * @param producer 服务提供者名称
+     * @param serviceName 服务名称
+     * @param version 服务版本
      * @param request 请求实体 {@link RpcRequest}
      * @return {@link RpcResponse}
      * @throws InterruptedException e
      */
-    public RpcResponse sendRequest(String producer, RpcRequest request) throws InterruptedException {
+    public RpcResponse sendRequest(String serviceName, int version, RpcRequest request) throws InterruptedException {
         // 创建请求报文
         RemotingCommand requestCommand = commandFactory.createRequest(request, RpcProtocol.REQUEST);
 
         // 获取producer地址
-        Url url = lookupProvider(producer);
+        Url url = lookupProvider(serviceName, version);
         url.setExpectedConnectionCount(maxConnections);
         // 发送请求，获得future
         InvokeFuture invokeFuture = client.sendFuture(url, requestCommand, null);
@@ -152,9 +150,9 @@ public class MiniRpcClient {
         }
     }
 
-    private Url lookupProvider(String groupName){
+    private Url lookupProvider(String serviceName, int version){
         // 本地缓存获取provider
-        Set<ProviderNode> providerNodes = localRegistry.lookUpProviders(groupName);
+        Set<ProviderNode> providerNodes = localRegistry.lookUpProviders(serviceName, version);
         ProviderNode provider = loadBalance.select(providerNodes);
         return Url.parseString(provider.getUrl());
     }
@@ -174,6 +172,8 @@ public class MiniRpcClient {
     }
 
     public void shutdown(){
-
+        if(client != null){
+            client.shutdown();
+        }
     }
 }

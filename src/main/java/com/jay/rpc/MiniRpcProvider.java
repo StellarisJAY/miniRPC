@@ -16,8 +16,6 @@ import com.jay.rpc.registry.LocalRegistry;
 import com.jay.rpc.registry.ProviderNode;
 import com.jay.rpc.registry.Registry;
 import com.jay.rpc.registry.SimpleRegistry;
-import com.jay.rpc.registry.redis.RedisRegistry;
-import com.jay.rpc.registry.zk.ZookeeperRegistry;
 import com.jay.rpc.remoting.*;
 import com.jay.rpc.serialize.ProtostuffSerializer;
 import com.jay.rpc.service.ServiceInfo;
@@ -25,6 +23,10 @@ import com.jay.rpc.service.ServiceMapping;
 import com.jay.rpc.spi.ExtensionLoader;
 import com.jay.rpc.util.ThreadPoolUtil;
 import lombok.extern.slf4j.Slf4j;
+
+import java.net.Inet4Address;
+import java.net.UnknownHostException;
+import java.util.List;
 
 /**
  * <p>
@@ -47,8 +49,7 @@ public class MiniRpcProvider extends AbstractLifeCycle {
     private final ServiceMapping serviceMapping;
     private final CommandHandler commandHandler;
     private final RpcProtocol rpcProtocol;
-    private Registry registry;
-    private LocalRegistry localRegistry;
+    private final LocalRegistry localRegistry;
     private final CommandFactory commandFactory;
     private final int port;
 
@@ -75,58 +76,59 @@ public class MiniRpcProvider extends AbstractLifeCycle {
         this.prometheusServer = new PrometheusServer();
     }
 
-    private void init(){
+    private void init() throws UnknownHostException {
         String registryType = MiniRpcConfigs.registryType();
-        String groupName = MiniRpcConfigs.providerGroup();
+        String serverHost = Inet4Address.getLocalHost().getHostAddress();
         // 生成节点信息
         ProviderNode node = ProviderNode.builder()
-                .url("127.0.0.1:" + port)
+                .url(serverHost + ":" + port)
                 .weight(10)
                 .lastHeartBeatTime(System.currentTimeMillis())
                 .build();
-
+        // 初始化serviceMapping，扫描@RpcService实现类
+        this.serviceMapping.init();
         // 创建注册中心客户端
-        if(!"simple".equalsIgnoreCase(registryType)){
+        Registry registry;
+        if(!MiniRpcConfigs.SIMPLE_REGISTRY.equalsIgnoreCase(registryType)){
             ExtensionLoader<Registry> registryLoader = ExtensionLoader.getExtensionLoader(Registry.class);
-            this.registry = registryLoader.getExtension(registryType);
+            registry = registryLoader.getExtension(registryType);
         }else{
             boolean isRegistry = MiniRpcConfigs.providerAsRegistry();
-            this.registry = new SimpleRegistry(isRegistry, client, commandFactory);
+            registry = new SimpleRegistry(isRegistry, client, commandFactory);
         }
 
         this.localRegistry.setRemoteRegistry(registry);
         // 初始化远程注册中心
         registry.init();
         registry.setLocalRegistry(localRegistry);
+        List<ServiceInfo> services = serviceMapping.listServices();
         // 注册当前provider
-        registry.registerProvider(groupName, node);
-        log.info("provider注册完成, group: {}", groupName);
+        registry.registerProvider(services, node);
         // 开启注册中心心跳
-        registry.startHeartBeat(groupName, node);
-    }
-
-    public Object getService(ServiceInfo serviceInfo){
-        return serviceMapping.getServiceInstance(serviceInfo);
+        registry.startHeartBeat(services, node);
     }
 
     @Override
     public void startup() {
         super.startup();
         long start = System.currentTimeMillis();
-        init();
-        // 注册协议
-        ProtocolManager.registerProtocol(rpcProtocol.getCode(), rpcProtocol);
-        // 注册序列化器
-        SerializerManager.registerSerializer((byte)1, new ProtostuffSerializer());
-        // 注册commandHandler线程池
-        this.commandHandler.registerDefaultExecutor(ThreadPoolUtil.newIoThreadPool("rpc-command-handler-"));
-        // 初始化serviceMapping，扫描@RpcService实现类
-        this.serviceMapping.init();
-        // 启动producer服务器
-        this.server.startup();
-        // 启动prometheus监控
-        this.prometheusServer.startup();
-        log.info("provider 启动完成，用时： {} ms", (System.currentTimeMillis() - start));
+        try{
+            init();
+            // 注册协议
+            ProtocolManager.registerProtocol(rpcProtocol.getCode(), rpcProtocol);
+            // 注册序列化器
+            SerializerManager.registerSerializer((byte)1, new ProtostuffSerializer());
+            // 注册commandHandler线程池
+            this.commandHandler.registerDefaultExecutor(ThreadPoolUtil.newIoThreadPool("rpc-command-handler-"));
+            // 启动producer服务器
+            this.server.startup();
+            // 启动prometheus监控
+            this.prometheusServer.startup();
+            log.info("provider 启动完成，用时： {} ms", (System.currentTimeMillis() - start));
+        }catch (Exception e){
+            log.error("Provider 启动失败");
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
