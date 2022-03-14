@@ -29,12 +29,7 @@ public class RpcCommandFactory implements CommandFactory {
 
     @Override
     public RemotingCommand createRequest(Object data, CommandCode commandCode) {
-        RpcRemotingCommand.RpcRemotingCommandBuilder builder = RpcRemotingCommand.builder()
-                .id(idProvider.getAndIncrement())
-                .commandCode(commandCode)
-                .serializer(DEFAULT_SERIALIZER)
-                .compressor(DEFAULT_COMPRESSOR)
-                .timeout(System.currentTimeMillis() + DEFAULT_TIMEOUT);
+        RpcRemotingCommand.RpcRemotingCommandBuilder builder = createHeader(idProvider.getAndIncrement(), commandCode);
         if(data instanceof RpcRequest){
             RpcRequest request = (RpcRequest) data;
             // 序列化request
@@ -56,13 +51,20 @@ public class RpcCommandFactory implements CommandFactory {
     }
 
     @Override
+    public <T> RemotingCommand createRequest(T t, CommandCode commandCode, Class<T> aClass) {
+        RpcRemotingCommand.RpcRemotingCommandBuilder builder = createHeader(idProvider.getAndIncrement(), commandCode);
+        Serializer serializer = SerializerManager.getSerializer(DEFAULT_SERIALIZER);
+        byte[] content = serializer.serialize(t, aClass);
+
+        return builder.content(content)
+                .length(RpcProtocol.HEADER_LENGTH)
+                .crc32(crc32(content))
+                .build();
+    }
+
+    @Override
     public RemotingCommand createResponse(int id, Object data, CommandCode commandCode) {
-        RpcRemotingCommand.RpcRemotingCommandBuilder builder = RpcRemotingCommand.builder()
-                .commandCode(RpcProtocol.RESPONSE)
-                .id(id)
-                .timeout(System.currentTimeMillis() + DEFAULT_TIMEOUT)
-                .serializer(DEFAULT_SERIALIZER)
-                .compressor(DEFAULT_COMPRESSOR);
+        RpcRemotingCommand.RpcRemotingCommandBuilder builder = createHeader(id, commandCode);
         if(data instanceof RpcResponse){
             RpcResponse response = (RpcResponse) data;
             // 序列化
@@ -89,14 +91,9 @@ public class RpcCommandFactory implements CommandFactory {
         if(data instanceof String){
             String message = (String) data;
             byte[] content = message.getBytes(StandardCharsets.UTF_8);
-            return RpcRemotingCommand.builder()
-                    .id(id)
-                    .commandCode(RpcProtocol.TIMEOUT)
-                    .compressor(DEFAULT_COMPRESSOR)
-                    .serializer(DEFAULT_SERIALIZER)
-                    .timeout(System.currentTimeMillis() + DEFAULT_TIMEOUT)
+            return createHeader(id, RpcProtocol.TIMEOUT)
                     .content(content)
-                    .length(content.length + RpcProtocol.HEADER_LENGTH)
+                    .length(RpcProtocol.HEADER_LENGTH + content.length)
                     .crc32(crc32(content))
                     .build();
         }
@@ -107,14 +104,9 @@ public class RpcCommandFactory implements CommandFactory {
     @Override
     public RemotingCommand createExceptionResponse(int id, String message) {
         byte[] content = message.getBytes(StandardCharsets.UTF_8);
-        return RpcRemotingCommand.builder()
-                .id(id)
-                .commandCode(RpcProtocol.ERROR)
-                .compressor(DEFAULT_COMPRESSOR)
-                .serializer(DEFAULT_SERIALIZER)
-                .timeout(System.currentTimeMillis() + DEFAULT_TIMEOUT)
+        return createHeader(id, RpcProtocol.ERROR)
                 .content(content)
-                .length(content.length + RpcProtocol.HEADER_LENGTH)
+                .length(RpcProtocol.HEADER_LENGTH + content.length)
                 .crc32(crc32(content))
                 .build();
     }
@@ -123,14 +115,9 @@ public class RpcCommandFactory implements CommandFactory {
     public RemotingCommand createExceptionResponse(int id, Throwable exception) {
         String message = exception.getMessage();
         byte[] content = message.getBytes(StandardCharsets.UTF_8);
-        return RpcRemotingCommand.builder()
-                .id(id)
-                .commandCode(RpcProtocol.ERROR)
-                .compressor(DEFAULT_COMPRESSOR)
-                .serializer(DEFAULT_SERIALIZER)
-                .timeout(System.currentTimeMillis() + DEFAULT_TIMEOUT)
+        return createHeader(id, RpcProtocol.ERROR)
                 .content(content)
-                .length(content.length + RpcProtocol.HEADER_LENGTH)
+                .length(RpcProtocol.HEADER_LENGTH + content.length)
                 .crc32(crc32(content))
                 .build();
     }
@@ -140,5 +127,14 @@ public class RpcCommandFactory implements CommandFactory {
         crc32.reset();
         crc32.update(content);
         return (int)crc32.getValue();
+    }
+
+    private RpcRemotingCommand.RpcRemotingCommandBuilder createHeader(int id, CommandCode code){
+        return RpcRemotingCommand.builder()
+                .id(id)
+                .commandCode(code)
+                .compressor(DEFAULT_COMPRESSOR)
+                .serializer(DEFAULT_SERIALIZER)
+                .timeout(System.currentTimeMillis() + DEFAULT_TIMEOUT);
     }
 }
