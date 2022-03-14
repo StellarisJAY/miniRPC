@@ -18,7 +18,6 @@ import java.util.Objects;
 @AllArgsConstructor
 @ToString
 public class ProviderNode {
-    private String groupName;
     private String url;
     private int weight;
     private long lastHeartBeatTime;
@@ -32,8 +31,12 @@ public class ProviderNode {
     }
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         ProviderNode that = (ProviderNode) o;
         return Objects.equals(url, that.url);
     }
