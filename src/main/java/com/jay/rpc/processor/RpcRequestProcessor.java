@@ -9,13 +9,13 @@ import com.jay.dove.transport.command.CommandFactory;
 import com.jay.dove.transport.command.RemotingCommand;
 import com.jay.rpc.entity.RpcRequest;
 import com.jay.rpc.entity.RpcResponse;
+import com.jay.rpc.filter.FilterCollection;
 import com.jay.rpc.remoting.RpcProtocol;
 import com.jay.rpc.remoting.RpcRemotingCommand;
 import com.jay.rpc.service.LocalServiceCache;
 import com.jay.rpc.service.ServiceInfo;
 import com.jay.rpc.service.ServiceInstance;
 import io.netty.channel.ChannelHandlerContext;
-import io.prometheus.client.Gauge;
 import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.InvocationTargetException;
@@ -37,70 +37,78 @@ public class RpcRequestProcessor extends AbstractProcessor {
      */
     private final CommandFactory commandFactory;
 
-    private static final Gauge IN_PROGRESS_REQUESTS = Gauge.build()
-            .name("rpc_in_progress_requests")
-            .help("get in progress rpc requests count")
-            .register();
-
-    private static final Gauge TOTAL_REQUESTS = Gauge.build()
-            .name("rpc_total_requests")
-            .help("get total request count since start")
-            .register();
-
     public RpcRequestProcessor(CommandFactory commandFactory) {
         this.commandFactory = commandFactory;
     }
 
     @Override
-    public void process(ChannelHandlerContext channelHandlerContext, Object in) {
-        if(in instanceof RpcRemotingCommand){
-            IN_PROGRESS_REQUESTS.inc();
-            TOTAL_REQUESTS.inc();
-            RpcRemotingCommand command = (RpcRemotingCommand) in;
-            RemotingCommand responseCommand = null;
-            try{
-                byte[] content = command.getContent();
-                // CRC32 校验
-                if(checkCrc32(content, command.getCrc32())){
-                    // 获取压缩器编码
-                    byte compressorCode = command.getCompressor();
-                    if(compressorCode != -1){
-                        // 解压数据部分
-                        Compressor compressor = CompressorManager.getCompressor(compressorCode);
-                        content = compressor.decompress(content);
-                    }
-                    // 获取序列化器
-                    byte serializerCode = command.getSerializer();
-                    Serializer serializer = SerializerManager.getSerializer(serializerCode);
-                    // 反序列化
-                    RpcRequest request = serializer.deserialize(content, RpcRequest.class);
-
-                    // 处理请求
-                    RpcResponse response = processRequest(request);
-                    // 创建response
-                    responseCommand = commandFactory.createResponse(command.getId(), response, RpcProtocol.RESPONSE);
-                }else{
-                    responseCommand = commandFactory.createExceptionResponse(command.getId(), "wrong crc32, network packet damaged");
-                }
-            } catch (Exception e) {
-                log.error("request processing error: ", e);
-                responseCommand = commandFactory.createExceptionResponse(command.getId(), e);
-            }finally {
-                // 发送response
-                sendResponse(channelHandlerContext, responseCommand);
-                IN_PROGRESS_REQUESTS.dec();
+    public void process(ChannelHandlerContext context, Object in) {
+        RpcRemotingCommand command = (RpcRemotingCommand) in;
+        RemotingCommand responseCommand;
+        byte[] content = command.getContent();
+        if(!checkCrc32(content, command.getCrc32())){
+            // CRC32校验不通过，报文损坏
+            responseCommand = commandFactory.createExceptionResponse(command.getId(), "wrong crc32, network packet damaged");
+        }else{
+            byte[] decompressedContent = decompressContent(command.getCompressor(), content);
+            RpcRequest request = deserializeRequest(command.getSerializer(), decompressedContent);
+            // 执行过滤器链
+            if(executeFilterChain(request)){
+                // 处理请求
+                RpcResponse response = processRequest(request);
+                // 创建response
+                responseCommand = commandFactory.createResponse(command.getId(), response, RpcProtocol.RESPONSE);
             }
-
+            else{
+                responseCommand = commandFactory.createResponse(command.getId(), "Request Blocked by Filter", RpcProtocol.ERROR);
+            }
         }
+        sendResponse(context, responseCommand);
+    }
+
+    /**
+     * 执行过滤器链
+     * @param request {@link RpcRequest}
+     * @return boolean
+     */
+    private boolean executeFilterChain(RpcRequest request){
+        return FilterCollection.executeFilterChain(request);
+    }
+
+
+    /**
+     * 解压content
+     * @param compressorCode 压缩器编号
+     * @param content 压缩内容
+     * @return byte[]
+     */
+    private byte[] decompressContent(byte compressorCode, byte[] content){
+        if(compressorCode != -1){
+            // 解压数据部分
+            Compressor compressor = CompressorManager.getCompressor(compressorCode);
+            return compressor.decompress(content);
+        }else{
+            return content;
+        }
+    }
+
+    /**
+     * 反序列化请求
+     * @param serializerCode 序列化器编号
+     * @param content 序列化数据
+     * @return {@link RpcRequest}
+     */
+    private RpcRequest deserializeRequest(byte serializerCode, byte[] content){
+        Serializer serializer = SerializerManager.getSerializer(serializerCode);
+        return serializer.deserialize(content, RpcRequest.class);
     }
 
     /**
      * 处理RPC request
      * @param request {@link RpcRequest}
      * @return {@link RpcResponse}
-     * @throws Exception 无法找到目标服务实现类或者方法
      */
-    private RpcResponse processRequest(RpcRequest request) throws Exception{
+    private RpcResponse processRequest(RpcRequest request){
         // 从ServiceMapping获取实现类instance
         String serviceName = request.getServiceName();
         int version = request.getVersion();
@@ -111,21 +119,20 @@ public class RpcRequestProcessor extends AbstractProcessor {
         if(serviceInstance == null){
             throw new RuntimeException("can't find target service , service name: " + serviceName + ", version: " + version);
         }
-
-        // 获取目标方法
-        Class<?> clazz = serviceInstance.getClazz();
-        Method method = clazz.getMethod(request.getMethodName(), request.getParameterTypes());
         RpcResponse.RpcResponseBuilder responseBuilder = RpcResponse.builder();
         try{
+            // 获取目标方法
+            Class<?> clazz = serviceInstance.getClazz();
+            Method method = clazz.getMethod(request.getMethodName(), request.getParameterTypes());
+
             // 设置方法访问权限
             method.setAccessible(true);
             // 反射执行方法
             Object result = method.invoke(serviceInstance.getInstance(), request.getParameters());
             responseBuilder.result(result);
-        }catch (InvocationTargetException e){
-            // 方法执行抛出异常
-            log.error("invocation exception: ", e);
-            responseBuilder.exception(e.getTargetException());
+        }catch (InvocationTargetException | IllegalAccessException | NoSuchMethodException e) {
+            log.error("Method invocation error ", e);
+            responseBuilder.exception(e);
         }
         return responseBuilder.build();
     }
