@@ -67,9 +67,9 @@ public class RedisRegistry implements Registry {
         String json = JSON.toJSONString(node);
         try (Jedis jedis = pool.getResource()) {
             for (ServiceInfo service : services) {
-                String key = KEY_PREFIX + service.getServiceName() + "/" + service.getVersion();
+                String key = KEY_PREFIX + service.getType().getName() + "/" + service.getVersion();
                 jedis.hset(key, node.getUrl(), json);
-                jedis.publish(KEY_PREFIX + service.getServiceName() + "/" + service.getVersion(), json);
+                jedis.publish(KEY_PREFIX + service.getType().getName() + "/" + service.getVersion(), json);
             }
             log.info("Provider Registered to Redis Registry");
         } catch (Exception e) {

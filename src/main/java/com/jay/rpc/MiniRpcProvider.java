@@ -18,8 +18,8 @@ import com.jay.rpc.registry.Registry;
 import com.jay.rpc.registry.SimpleRegistry;
 import com.jay.rpc.remoting.*;
 import com.jay.rpc.serialize.ProtostuffSerializer;
+import com.jay.rpc.service.LocalServiceCache;
 import com.jay.rpc.service.ServiceInfo;
-import com.jay.rpc.service.ServiceMapping;
 import com.jay.rpc.spi.ExtensionLoader;
 import com.jay.rpc.util.ThreadPoolUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -46,7 +46,6 @@ public class MiniRpcProvider extends AbstractLifeCycle {
      * dove client
      */
     private final DoveClient client;
-    private final ServiceMapping serviceMapping;
     private final CommandHandler commandHandler;
     private final RpcProtocol rpcProtocol;
     private final LocalRegistry localRegistry;
@@ -55,18 +54,17 @@ public class MiniRpcProvider extends AbstractLifeCycle {
 
     private final PrometheusServer prometheusServer;
 
-    public MiniRpcProvider(String basePackage) {
+    public MiniRpcProvider() {
         // 获取服务器端口
         this.port = MiniRpcConfigs.serverPort();
         this.commandFactory = new RpcCommandFactory();
         Codec miniRpcCodec = new MiniRpcCodec();
-        this.serviceMapping = new ServiceMapping(basePackage);
         // 创建客户端和连接管理器
         ConnectionManager connectionManager = new ConnectionManager(new RpcConnectionFactory());
         this.client = new DoveClient(connectionManager, commandFactory);
         // 创建本地注册中心缓存
         this.localRegistry = new LocalRegistry();
-        this.commandHandler = new MiniRpcCommandHandler(serviceMapping, commandFactory, localRegistry);
+        this.commandHandler = new MiniRpcCommandHandler(commandFactory, localRegistry);
         // dove服务器启用SSL
         if(MiniRpcConfigs.enableSsl()){
             DoveConfigs.setEnableSsl(true);
@@ -85,8 +83,6 @@ public class MiniRpcProvider extends AbstractLifeCycle {
                 .weight(10)
                 .lastHeartBeatTime(System.currentTimeMillis())
                 .build();
-        // 初始化serviceMapping，扫描@RpcService实现类
-        this.serviceMapping.init();
         // 创建注册中心客户端
         Registry registry;
         if(!MiniRpcConfigs.SIMPLE_REGISTRY.equalsIgnoreCase(registryType)){
@@ -101,7 +97,7 @@ public class MiniRpcProvider extends AbstractLifeCycle {
         // 初始化远程注册中心
         registry.init();
         registry.setLocalRegistry(localRegistry);
-        List<ServiceInfo> services = serviceMapping.listServices();
+        List<ServiceInfo> services = LocalServiceCache.listServices();
         // 注册当前provider
         registry.registerProvider(services, node);
         // 开启注册中心心跳

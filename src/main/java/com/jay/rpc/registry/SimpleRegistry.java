@@ -7,6 +7,7 @@ import com.jay.dove.transport.command.CommandFactory;
 import com.jay.rpc.config.MiniRpcConfigs;
 import com.jay.rpc.remoting.RpcProtocol;
 import com.jay.rpc.remoting.RpcRemotingCommand;
+import com.jay.rpc.service.ServiceInfo;
 import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.StandardCharsets;
@@ -48,6 +49,16 @@ public class SimpleRegistry implements Registry{
     }
 
     @Override
+    public Set<ProviderNode> lookupProviders(String serviceName, int version) {
+        return null;
+    }
+
+    @Override
+    public void registerProvider(List<ServiceInfo> services, ProviderNode node) {
+
+    }
+
+    @Override
     public void init() {
         if(!isRegistry){
             // 加载Simple注册中心地址
@@ -58,45 +69,50 @@ public class SimpleRegistry implements Registry{
     }
 
     @Override
-    public Set<ProviderNode> lookupProviders(String groupName) {
-        Set<ProviderNode> nodes = new HashSet<>();
-        if(!isRegistry){
-            // 创建LOOK_UP请求
-            RpcRemotingCommand request = (RpcRemotingCommand) commandFactory.createRequest(groupName, RpcProtocol.LOOKUP);
-            try{
-                // 发送LOOKUP请求
-                RpcRemotingCommand response = (RpcRemotingCommand) registryClient.sendSync(registryUrl, request, null);
-                byte[] content = response.getContent();
-                // 解析JSON数据
-                String json = new String(content, StandardCharsets.UTF_8);
-                List<ProviderNode> nodeList = JSON.parseArray(json, ProviderNode.class);
-                nodes.addAll(nodeList);
-            }catch (Exception e){
-                log.error("failed to look up providers from remote registry", e);
-            }
-        }
-        return nodes;
+    public void heatBeat(List<ServiceInfo> services, ProviderNode node) {
+
     }
 
-    @Override
-    public void registerProvider(String groupName, ProviderNode node) {
-        // 该Provider作为注册中心
-        if(isRegistry){
-            // 在本地注册
-            localRegistry.registerProvider(groupName, node);
-        }else{
-            // 生成JSON
-            String json = JSON.toJSONString(node);
-            // 创建注册请求
-            RpcRemotingCommand request = (RpcRemotingCommand) commandFactory.createRequest(json, RpcProtocol.REGISTER);
-            try{
-                // 发送注册请求
-                RpcRemotingCommand response = (RpcRemotingCommand)registryClient.sendSync(registryUrl, request, null);
-            }catch (Exception e){
-                log.error("failed to register provider node, ", e);
-            }
-        }
-    }
+//    @Override
+//    public Set<ProviderNode> lookupProviders(String groupName) {
+//        Set<ProviderNode> nodes = new HashSet<>();
+//        if(!isRegistry){
+//            // 创建LOOK_UP请求
+//            RpcRemotingCommand request = (RpcRemotingCommand) commandFactory.createRequest(groupName, RpcProtocol.LOOKUP);
+//            try{
+//                // 发送LOOKUP请求
+//                RpcRemotingCommand response = (RpcRemotingCommand) registryClient.sendSync(registryUrl, request, null);
+//                byte[] content = response.getContent();
+//                // 解析JSON数据
+//                String json = new String(content, StandardCharsets.UTF_8);
+//                List<ProviderNode> nodeList = JSON.parseArray(json, ProviderNode.class);
+//                nodes.addAll(nodeList);
+//            }catch (Exception e){
+//                log.error("failed to look up providers from remote registry", e);
+//            }
+//        }
+//        return nodes;
+//    }
+//
+//    @Override
+//    public void registerProvider(String groupName, ProviderNode node) {
+//        // 该Provider作为注册中心
+//        if(isRegistry){
+//            // 在本地注册
+//            localRegistry.registerProvider(groupName, node);
+//        }else{
+//            // 生成JSON
+//            String json = JSON.toJSONString(node);
+//            // 创建注册请求
+//            RpcRemotingCommand request = (RpcRemotingCommand) commandFactory.createRequest(json, RpcProtocol.REGISTER);
+//            try{
+//                // 发送注册请求
+//                RpcRemotingCommand response = (RpcRemotingCommand)registryClient.sendSync(registryUrl, request, null);
+//            }catch (Exception e){
+//                log.error("failed to register provider node, ", e);
+//            }
+//        }
+//    }
 
 
 

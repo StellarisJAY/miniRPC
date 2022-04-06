@@ -33,8 +33,8 @@ public class MiniRpcProxy {
             RpcRequest request = RpcRequest.builder().methodName(method.getName())
                     .parameters(args)
                     .parameterTypes(method.getParameterTypes())
-                    .serviceName(serviceName)
                     .version(version)
+                    .type(targetClass)
                     .build();
             // 发送请求
             RpcResponse response = CLIENT.sendRequest(serviceName, version, request);

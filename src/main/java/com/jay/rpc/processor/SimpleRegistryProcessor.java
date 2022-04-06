@@ -46,8 +46,9 @@ public class SimpleRegistryProcessor extends AbstractProcessor {
 
     private void processLookup(ChannelHandlerContext context, RpcRemotingCommand request){
         byte[] content = request.getContent();
-        String groupName = new String(content, StandardCharsets.UTF_8);
-        Set<ProviderNode> nodes = localRegistry.lookUpProviders(groupName);
+        String serviceName = "";
+        int version = 0;
+        Set<ProviderNode> nodes = localRegistry.lookUpProviders(serviceName, version);
         String json = JSON.toJSONString(nodes);
         RpcRemotingCommand response = (RpcRemotingCommand)commandFactory.createResponse(request.getId(), json, RpcProtocol.RESPONSE);
         sendResponse(context, response);
@@ -59,7 +60,7 @@ public class SimpleRegistryProcessor extends AbstractProcessor {
         String json = new String(content, StandardCharsets.UTF_8);
         ProviderNode node = JSON.parseObject(json, ProviderNode.class);
         // 在本地注册中心注册Provider
-        localRegistry.registerProvider(node.getGroupName(), node);
+        localRegistry.registerProvider(node.getUrl(), 0, node);
         // 发送response
         RpcRemotingCommand response = (RpcRemotingCommand)commandFactory.createResponse(request.getId(), "success", RpcProtocol.RESPONSE);
         sendResponse(context, response);

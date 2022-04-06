@@ -11,9 +11,9 @@ import com.jay.rpc.entity.RpcRequest;
 import com.jay.rpc.entity.RpcResponse;
 import com.jay.rpc.remoting.RpcProtocol;
 import com.jay.rpc.remoting.RpcRemotingCommand;
+import com.jay.rpc.service.LocalServiceCache;
 import com.jay.rpc.service.ServiceInfo;
 import com.jay.rpc.service.ServiceInstance;
-import com.jay.rpc.service.ServiceMapping;
 import io.netty.channel.ChannelHandlerContext;
 import io.prometheus.client.Gauge;
 import lombok.extern.slf4j.Slf4j;
@@ -36,10 +36,6 @@ public class RpcRequestProcessor extends AbstractProcessor {
      * command工厂
      */
     private final CommandFactory commandFactory;
-    /**
-     * 服务-服务实现映射
-     */
-    private final ServiceMapping serviceMapping;
 
     private static final Gauge IN_PROGRESS_REQUESTS = Gauge.build()
             .name("rpc_in_progress_requests")
@@ -51,9 +47,8 @@ public class RpcRequestProcessor extends AbstractProcessor {
             .help("get total request count since start")
             .register();
 
-    public RpcRequestProcessor(CommandFactory commandFactory, ServiceMapping serviceMapping) {
+    public RpcRequestProcessor(CommandFactory commandFactory) {
         this.commandFactory = commandFactory;
-        this.serviceMapping = serviceMapping;
     }
 
     @Override
@@ -109,8 +104,8 @@ public class RpcRequestProcessor extends AbstractProcessor {
         // 从ServiceMapping获取实现类instance
         String serviceName = request.getServiceName();
         int version = request.getVersion();
-        ServiceInfo serviceInfo = new ServiceInfo(serviceName, version);
-        ServiceInstance serviceInstance = serviceMapping.getServiceInstance(serviceInfo);
+        ServiceInfo serviceInfo = new ServiceInfo(request.getType(), version);
+        ServiceInstance serviceInstance = LocalServiceCache.getServiceInstance(serviceInfo);
 
         // 没有找到实现类
         if(serviceInstance == null){
@@ -145,7 +140,7 @@ public class RpcRequestProcessor extends AbstractProcessor {
         CRC32 crc = new CRC32();
         crc.reset();
         crc.update(content, 0, content.length);
-        int value = (int) crc.getValue();
+        int value = (int)crc.getValue();
         return value == crc32;
     }
 }
