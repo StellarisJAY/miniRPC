@@ -13,6 +13,7 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.recipes.cache.TreeCache;
 import org.apache.curator.retry.RetryOneTime;
 import org.apache.zookeeper.CreateMode;
+import org.springframework.util.ClassUtils;
 
 import java.util.HashSet;
 import java.util.List;
@@ -22,7 +23,7 @@ import java.util.Set;
  * <p>
  *  Zookeeper注册中心客户端
  *  服务注册格式：
- *  path: /mini-rpc/services/{serviceName}/{version}/{url}
+ *  path: /mini-rpc/services/{interface Name}/{version}/{url}
  *  data: JSON(ProviderNode)
  *
  *  订阅服务：
@@ -61,6 +62,7 @@ public class ZookeeperRegistry implements Registry {
                 ProviderNode node = JSON.parseObject(json, ProviderNode.class);
                 result.add(node);
             }
+            log.info("Look up service done, service: {}, providers: {}", path, result);
         }catch (Exception e){
             log.error("Look up service error, service: {}_{}", serviceName, version, e);
         }
@@ -75,9 +77,9 @@ public class ZookeeperRegistry implements Registry {
         for (ServiceInfo service : services) {
             try{
                 client.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL)
-                        .forPath(getPath(service.getServiceName(), service.getVersion()) + "/" + url, data);
+                        .forPath(getPath(service.getType().getName(), service.getVersion()) + "/" + url, data);
             }catch (Exception e){
-                log.error("Register Provider Error, Service: {}_{}", service.getServiceName(), service.getVersion(), e);
+                log.error("Register Provider Error, Service: {}_{}", service.getType(), service.getVersion(), e);
             }
         }
     }
@@ -133,7 +135,7 @@ public class ZookeeperRegistry implements Registry {
                     // 注册新的Provider到本地Registry
                     String json = new String(data, MiniRpcConfigs.DEFAULT_CHARSET);
                     ProviderNode node = JSON.parseObject(json, ProviderNode.class);
-                    localRegistry.registerProvider(serviceInfo.getServiceName(), serviceInfo.getVersion(), node);
+                    localRegistry.registerProvider(serviceInfo.getType().getName(), serviceInfo.getVersion(), node);
                 }
             }
 
@@ -143,18 +145,20 @@ public class ZookeeperRegistry implements Registry {
         public void onNodeDeleted(String path)  {
             ServiceInfo serviceInfo = getServiceInfo(path);
             if(serviceInfo != null){
+                log.info("Provider offline: {}", path);
                 // node被删除，Provider下线
-                localRegistry.onProviderOffline(getUrl(path), serviceInfo.getServiceName(), serviceInfo.getVersion());
+                localRegistry.onProviderOffline(getUrl(path), serviceInfo.getType().getName(), serviceInfo.getVersion());
             }
         }
         private ServiceInfo getServiceInfo(String path){
             int idx = path.indexOf(ROOT_PATH);
             if(idx != -1) {
-                String substring = path.substring(idx + ROOT_PATH.length() + 2);
+                String substring = path.substring(idx + ROOT_PATH.length() + 1);
                 String[] parts = substring.split("/");
                 String serviceName = parts[0];
                 int version = Integer.parseInt(parts[1]);
-                return new ServiceInfo(serviceName, version);
+                Class<?> type = ClassUtils.resolveClassName(parts[0], getClass().getClassLoader());
+                return new ServiceInfo(type, version);
             }
             return null;
         }
