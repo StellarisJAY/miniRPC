@@ -2,6 +2,9 @@ package com.jay.rpc.starter;
 
 import com.jay.rpc.MiniRpcProvider;
 import com.jay.rpc.annotation.RpcService;
+import com.jay.rpc.filter.Filter;
+import com.jay.rpc.filter.FilterCollection;
+import com.jay.rpc.filter.RpcFilter;
 import com.jay.rpc.service.LocalServiceCache;
 import com.jay.rpc.service.ServiceInfo;
 import com.jay.rpc.service.ServiceInstance;
@@ -15,7 +18,7 @@ import java.util.Map;
 
 /**
  * <p>
- *
+ *  Rpc服务提供者自动配置类
  * </p>
  *
  * @author Jay
@@ -35,12 +38,32 @@ public class RpcProviderAutoConfiguration implements InitializingBean, Applicati
         // 遍历beans
         for (Map.Entry<String, Object> entry : beans.entrySet()) {
             Object instance = entry.getValue();
-            RpcService annotation = instance.getClass().getAnnotation(RpcService.class);
-            Class<?> type = annotation.type();
-            int version = annotation.version();
-            // 封装serviceInfo，缓存在本地服务缓存
-            ServiceInfo serviceInfo = new ServiceInfo(type, version);
-            LocalServiceCache.registerServiceInstance(serviceInfo, new ServiceInstance(type, instance));
+            // 扫描RPCService注解
+            if(instance.getClass().isAnnotationPresent(RpcService.class)){
+                RpcService annotation = instance.getClass().getAnnotation(RpcService.class);
+                Class<?> type = annotation.type();
+                int version = annotation.version();
+                // 封装serviceInfo，缓存在本地服务缓存
+                ServiceInfo serviceInfo = new ServiceInfo(type, version);
+                LocalServiceCache.registerServiceInstance(serviceInfo, new ServiceInstance(type, instance));
+            }
+            // 扫描RpcFilter注解
+            else if(instance.getClass().isAnnotationPresent(RpcFilter.class)){
+                RpcFilter annotation = instance.getClass().getAnnotation(RpcFilter.class);
+                // 获取注解的exclusions属性
+                String[] exclusions = annotation.exclusions();
+                try{
+                    Filter filter = (Filter) instance;
+                    // 设置exclusions
+                    for (String exclusion : exclusions) {
+                        filter.addExclusion(exclusion);
+                    }
+                    FilterCollection.addFilter(filter);
+                }catch (Throwable e){
+                    e.printStackTrace();
+                }
+            }
+
         }
         // 启动provider服务
         provider.startup();
