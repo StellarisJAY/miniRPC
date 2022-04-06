@@ -20,7 +20,7 @@ import java.util.Objects;
 @ToString
 @AllArgsConstructor
 public class ServiceInfo {
-    private String serviceName;
+    private Class<?> type;
     private int version;
 
     @Override
@@ -32,11 +32,11 @@ public class ServiceInfo {
             return false;
         }
         ServiceInfo that = (ServiceInfo) o;
-        return version == that.version && Objects.equals(serviceName, that.serviceName);
+        return version == that.version && Objects.equals(type, that.type);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(version, serviceName);
+        return Objects.hash(version, type);
     }
 }
