@@ -20,6 +20,7 @@
         <fastjson.version>1.2.70</fastjson.version>
         <curator.version>2.7.0</curator.version>
         <prometheus.version>0.9.0</prometheus.version>
+        <spring.boot.version>2.6.4</spring.boot.version>
     </properties>
 
     <dependencies>
@@ -108,6 +109,19 @@
             <version>${prometheus.version}</version>
         </dependency>
 
+        <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+            <version>${spring.boot.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <version>${spring.boot.version}</version>
+            <scope>test</scope>
+        </dependency>
 
     </dependencies>
 
