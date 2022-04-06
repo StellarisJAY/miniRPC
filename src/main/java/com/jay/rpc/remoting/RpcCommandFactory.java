@@ -57,7 +57,7 @@ public class RpcCommandFactory implements CommandFactory {
         byte[] content = serializer.serialize(t, aClass);
 
         return builder.content(content)
-                .length(RpcProtocol.HEADER_LENGTH)
+                .length(RpcProtocol.HEADER_LENGTH + content.length)
                 .crc32(crc32(content))
                 .build();
     }
