@@ -119,12 +119,16 @@ public class MiniRpcClient {
 
         // 获取producer地址
         Url url = lookupProvider(serviceName, version);
+        if(url == null){
+            return RpcResponse.builder()
+                    .exception(new NullPointerException("No provider found for " + serviceName))
+                    .build();
+        }
         url.setExpectedConnectionCount(maxConnections);
         // 发送请求，获得future
         InvokeFuture invokeFuture = client.sendFuture(url, requestCommand, null);
         // 等待结果
         RpcRemotingCommand responseCommand = (RpcRemotingCommand) invokeFuture.awaitResponse();
-
         if(responseCommand.getCommandCode().equals(RpcProtocol.RESPONSE)){
             // 获得response
             byte[] content = responseCommand.getContent();
@@ -144,17 +148,26 @@ public class MiniRpcClient {
                 // CRC32 错误，报文损坏
                 throw new RuntimeException("network packet damaged during transport");
             }
+        }else if(responseCommand.getCommandCode().equals(RpcProtocol.ERROR)){
+            // 服务端回复Error
+            throw new RuntimeException(new String(responseCommand.getContent(), StandardCharsets.UTF_8));
         }else{
-            // response 为 TIMEOUT 或 ERROR
+            // 请求Timeout
             throw new RuntimeException(new String(responseCommand.getContent(), StandardCharsets.UTF_8));
         }
     }
 
+    /**
+     * 查询服务提供者
+     * @param serviceName 服务名
+     * @param version 服务版本
+     * @return 服务提供者地址
+     */
     private Url lookupProvider(String serviceName, int version){
         // 本地缓存获取provider
         Set<ProviderNode> providerNodes = localRegistry.lookUpProviders(serviceName, version);
         ProviderNode provider = loadBalance.select(providerNodes);
-        return Url.parseString(provider.getUrl());
+        return provider == null ? null : Url.parseString(provider.getUrl());
     }
 
     /**

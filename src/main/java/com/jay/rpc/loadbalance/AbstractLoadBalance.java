@@ -3,6 +3,7 @@ package com.jay.rpc.loadbalance;
 import com.jay.rpc.config.MiniRpcConfigs;
 import com.jay.rpc.registry.ProviderNode;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -19,10 +20,10 @@ public abstract class AbstractLoadBalance implements LoadBalance{
     @Override
     public ProviderNode select(Set<ProviderNode> providerNodes) {
         // 过滤掉长期没有心跳的provider
-        List<ProviderNode> list = providerNodes
-                .stream()
-                .filter(node -> node.getLastHeartBeatTime() + MiniRpcConfigs.REGISTER_TIMEOUT > System.currentTimeMillis())
-                .collect(Collectors.toList());
+        List<ProviderNode> list = new ArrayList<>(providerNodes);
+        if(list.size() == 0){
+            return null;
+        }
         // 只有一个，直接返回
         if(list.size() == 1){
             return list.get(0);
