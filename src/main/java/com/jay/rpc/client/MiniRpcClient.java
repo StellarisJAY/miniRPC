@@ -107,21 +107,19 @@ public class MiniRpcClient {
 
     /**
      * 发送请求
-     * @param serviceName 服务名称
-     * @param version 服务版本
      * @param request 请求实体 {@link RpcRequest}
      * @return {@link RpcResponse}
      * @throws InterruptedException e
      */
-    public RpcResponse sendRequest(String serviceName, int version, RpcRequest request) throws InterruptedException {
+    public RpcResponse sendRequest(RpcRequest request) throws InterruptedException {
         // 创建请求报文，command工厂序列化
         RemotingCommand requestCommand = commandFactory.createRequest(request, RpcProtocol.REQUEST, RpcRequest.class);
 
         // 获取producer地址
-        Url url = lookupProvider(serviceName, version);
+        Url url = lookupProvider(request);
         if(url == null){
             return RpcResponse.builder()
-                    .exception(new NullPointerException("No provider found for " + serviceName))
+                    .exception(new NullPointerException("No provider found for " + request.getType().getName()))
                     .build();
         }
         url.setExpectedConnectionCount(maxConnections);
@@ -159,14 +157,13 @@ public class MiniRpcClient {
 
     /**
      * 查询服务提供者
-     * @param serviceName 服务名
-     * @param version 服务版本
+     * @param request {@link RpcRequest}
      * @return 服务提供者地址
      */
-    private Url lookupProvider(String serviceName, int version){
+    private Url lookupProvider(RpcRequest request){
         // 本地缓存获取provider
-        Set<ProviderNode> providerNodes = localRegistry.lookUpProviders(serviceName, version);
-        ProviderNode provider = loadBalance.select(providerNodes);
+        Set<ProviderNode> providerNodes = localRegistry.lookUpProviders(request.getType().getName(), request.getVersion());
+        ProviderNode provider = loadBalance.select(providerNodes, request);
         return provider == null ? null : Url.parseString(provider.getUrl());
     }
 
@@ -182,11 +179,5 @@ public class MiniRpcClient {
         crc.update(content, 0, content.length);
         int value = (int) crc.getValue();
         return value == crc32;
-    }
-
-    public void shutdown(){
-        if(client != null){
-            client.shutdown();
-        }
     }
 }

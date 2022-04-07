@@ -1,12 +1,9 @@
 package com.jay.rpc.starter;
 
 import com.jay.rpc.annotation.RpcAutowired;
-import com.jay.rpc.client.MiniRpcClient;
 import com.jay.rpc.proxy.MiniRpcProxy;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.ApplicationListener;
 
 import java.lang.reflect.Field;
 
@@ -29,7 +26,7 @@ public class RpcClientAutoConfiguration implements BeanPostProcessor {
                 RpcAutowired annotation = field.getAnnotation(RpcAutowired.class);
                 int version = annotation.version();
                 // 创建代理对象
-                Object instance = MiniRpcProxy.createInstance(field.getType(), field.getType().getName(), version);
+                Object instance = MiniRpcProxy.createInstance(field.getType(), version);
                 // 重新设置field
                 try{
                     field.setAccessible(true);
