@@ -110,14 +110,14 @@ public class RpcRequestProcessor extends AbstractProcessor {
      */
     private RpcResponse processRequest(RpcRequest request){
         // 从ServiceMapping获取实现类instance
-        String serviceName = request.getServiceName();
+        Class<?> requestedClazz = request.getType();
         int version = request.getVersion();
-        ServiceInfo serviceInfo = new ServiceInfo(request.getType(), version);
+        ServiceInfo serviceInfo = new ServiceInfo(requestedClazz, version);
         ServiceInstance serviceInstance = LocalServiceCache.getServiceInstance(serviceInfo);
 
         // 没有找到实现类
         if(serviceInstance == null){
-            throw new RuntimeException("can't find target service , service name: " + serviceName + ", version: " + version);
+            throw new RuntimeException("can't find target service , service name: " + requestedClazz + ", version: " + version);
         }
         RpcResponse.RpcResponseBuilder responseBuilder = RpcResponse.builder();
         try{
