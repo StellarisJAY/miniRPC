@@ -18,10 +18,8 @@ import java.io.Serializable;
 public class RpcRequest implements Serializable {
     private static final long serialVersionUID = 1L;
     /**
-     * 服务名
+     * 请求服务接口类型
      */
-    private String serviceName;
-
     private Class<?> type;
     /**
      * 服务版本
