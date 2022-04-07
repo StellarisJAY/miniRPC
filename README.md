@@ -1,8 +1,8 @@
 # Mini-RPC
 
-Mini-RPC 是 基于Netty开发的 使用TCP通信的 RPC框架。
+Mini-RPC 是 基于Netty开发的 使用TCP通信的 RPC框架。提供了多种注册中心、服务版本控制、客户端负载均衡、服务端过滤器等功能。
 
-Mini-RPC是SimpleRPC-NEW的升级版，使用自制的Dove框架开发，优化了底层的网络通信代码。不同于旧版本，Mini-RPC能够在没有Spring的情况下使用。
+Mini-RPC提供了SpringBoot-Starter以及各种注解，可以很方便地在SpringBoot项目中使用。
 
 ## 使用说明
 
@@ -14,7 +14,7 @@ RPC系统中共有三种角色，注册中心、服务提供者（**Provider**�
 - **Service**：服务，在Mini-RPC中服务以 Java 类为载体，一个Java类就是一个服务。
 - **Version**：服务版本，服务可以有不同的版本，因此同一个服务可以对应多个Java类。
 - **Consumer**：服务消费者，通过RPC客户端调用远程服务。
-- **Registry**：注册中心，消费者通过注册中心了解服务提供者的地址。Mini-RPC支持三种注册中心，Redis、Zookeeper和Simple。其中Simple不依赖外部应用，它会将指定的Provider服务器作为注册中心。
+- **Registry**：注册中心，消费者通过注册中心了解服务提供者的地址。Mini-RPC支持Zookeeper和Redis作为注册中心。
 
 ### maven依赖
 
@@ -43,9 +43,6 @@ mini-rpc.registry.redis.port = 6379
 # zookeeper 
 mini-rpc.registry.zookeeper.host = 127.0.0.1
 mini-rpc.registry.zookeeper.port = 6379
-# simple
-mini-rpc.registry.simple.host = 127.0.0.1
-mini-rpc.registry.simple.port = 6379
 ```
 
 #### Provider配置
@@ -80,7 +77,7 @@ public interface HelloService{
 }
 
 // 在注解的name属性输入服务名
-@RpcService(name = "hello-service", version=1)
+@RpcService(type = HelloService.class, version=1)
 public class HelloServiceImplV1 implements HelloService{
     @Overrides
     public String sayHello(String name){
@@ -89,7 +86,7 @@ public class HelloServiceImplV1 implements HelloService{
 }
 
 // 通过version属性来完成版本控制
-@RpcService(name = "hello-service", version=2)
+@RpcService(type=HelloService.class, version=2)
 public class HelloServiceImplV2 implements HelloService{
     @Overrides
     public String sayHello(String name){
@@ -122,6 +119,42 @@ public class Consumer {
     }
 }
 ```
+
+### @RpcAutowired注解
+
+使用RpcAutowired注解可以借助Spring容器来加载一个RPC代理对象，具体的用法如下：
+
+```java
+@RestController
+public class TestController {
+    // 在注解中指定调用服务的版本
+    @RpcAutowired(version = 1)
+    private HelloService helloService;
+
+    @GetMapping("/test/v1/{name}")
+    public String testHelloV1(@PathVariable("name") String name){
+        return helloService.hello(name);
+    }
+
+```
+
+### 过滤器
+
+通过配置过滤器可以实现对请求的筛选过滤，过滤器可以配置exlusions来排除请求，也可以配置优先级来调节过滤器在执行链中的位置。
+
+```java
+// 通过注解配置排除的请求（请求类名/版本号/方法名）和优先级（值大优先）
+@RpcFilter(exclusions = "com.jay.service.HelloService/1/sayHello", priority = 500)
+public class MyFilter extends AbstractFilter {
+    @Override
+    public boolean doFilter(RpcRequest rpcRequest) {
+        // 检查参数是否是null
+        return Arrays.stream(rpcRequest.getParameters()).allMatch(Objects::nonNull);
+    }
+}
+```
+
+
 
 ## Client注册中心缓存
 
@@ -195,4 +228,6 @@ public class MyTest {
     }
 }
 ```
+
+## 性能测试
 
