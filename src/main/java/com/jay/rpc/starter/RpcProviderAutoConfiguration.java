@@ -50,10 +50,12 @@ public class RpcProviderAutoConfiguration implements InitializingBean, Applicati
             // 扫描RpcFilter注解
             else if(instance.getClass().isAnnotationPresent(RpcFilter.class)){
                 RpcFilter annotation = instance.getClass().getAnnotation(RpcFilter.class);
+
                 // 获取注解的exclusions属性
                 String[] exclusions = annotation.exclusions();
                 try{
                     Filter filter = (Filter) instance;
+                    filter.setPriority(annotation.priority());
                     // 设置exclusions
                     for (String exclusion : exclusions) {
                         filter.addExclusion(exclusion);

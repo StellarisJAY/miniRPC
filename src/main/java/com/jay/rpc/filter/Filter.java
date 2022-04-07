@@ -25,6 +25,12 @@ public interface Filter {
     int getPriority();
 
     /**
+     * 设置过滤器优先级
+     * @param priority 优先级
+     */
+    void setPriority(int priority);
+
+    /**
      * 添加排除的请求
      * @param request 格式：class/version/method
      */

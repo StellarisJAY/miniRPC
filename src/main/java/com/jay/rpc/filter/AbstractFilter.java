@@ -18,11 +18,7 @@ public abstract class AbstractFilter implements Filter{
      * exclude请求列表
      */
     private final Set<String> EXCLUSIONS = new HashSet<>();
-    private final int priority;
-
-    public AbstractFilter(int priority){
-        this.priority = priority;
-    }
+    private int priority;
 
     public AbstractFilter(){
         this.priority = 100;
@@ -51,6 +47,11 @@ public abstract class AbstractFilter implements Filter{
     @Override
     public void addExclusion(String exclusion){
         EXCLUSIONS.add(exclusion);
+    }
+
+    @Override
+    public final void setPriority(int priority){
+        this.priority = priority;
     }
 
 }
