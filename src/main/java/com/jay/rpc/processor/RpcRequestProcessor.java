@@ -9,7 +9,7 @@ import com.jay.dove.transport.command.CommandFactory;
 import com.jay.dove.transport.command.RemotingCommand;
 import com.jay.rpc.entity.RpcRequest;
 import com.jay.rpc.entity.RpcResponse;
-import com.jay.rpc.filter.FilterCollection;
+import com.jay.rpc.filter.FilterChain;
 import com.jay.rpc.remoting.RpcProtocol;
 import com.jay.rpc.remoting.RpcRemotingCommand;
 import com.jay.rpc.service.LocalServiceCache;
@@ -72,7 +72,7 @@ public class RpcRequestProcessor extends AbstractProcessor {
      * @return boolean
      */
     private boolean executeFilterChain(RpcRequest request){
-        return FilterCollection.executeFilterChain(request);
+        return FilterChain.executeFilterChain(request);
     }
 
 

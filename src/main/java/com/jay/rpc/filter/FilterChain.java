@@ -7,13 +7,13 @@ import java.util.Queue;
 
 /**
  * <p>
- *  过滤器集合
+ *  过滤器执行链
  * </p>
  *
  * @author Jay
  * @date 2022/04/06 14:41
  */
-public class FilterCollection {
+public class FilterChain {
     /**
      * 过滤器排序集合，使用PriorityQueue排序
      */
