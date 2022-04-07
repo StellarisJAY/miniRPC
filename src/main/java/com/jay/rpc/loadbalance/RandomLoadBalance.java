@@ -1,5 +1,6 @@
 package com.jay.rpc.loadbalance;
 
+import com.jay.rpc.entity.RpcRequest;
 import com.jay.rpc.registry.ProviderNode;
 
 import java.util.List;
@@ -15,7 +16,7 @@ import java.util.Random;
  */
 public class RandomLoadBalance extends AbstractLoadBalance{
     @Override
-    public ProviderNode doSelect(List<ProviderNode> providerNodes) {
+    public ProviderNode doSelect(List<ProviderNode> providerNodes, RpcRequest request) {
         Random random = new Random();
         return providerNodes.get(random.nextInt(providerNodes.size()));
     }

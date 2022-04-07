@@ -1,12 +1,11 @@
 package com.jay.rpc.loadbalance;
 
-import com.jay.rpc.config.MiniRpcConfigs;
+import com.jay.rpc.entity.RpcRequest;
 import com.jay.rpc.registry.ProviderNode;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * <p>
@@ -18,9 +17,9 @@ import java.util.stream.Collectors;
  */
 public abstract class AbstractLoadBalance implements LoadBalance{
     @Override
-    public ProviderNode select(Set<ProviderNode> providerNodes) {
-        // 过滤掉长期没有心跳的provider
+    public ProviderNode select(Set<ProviderNode> providerNodes, RpcRequest request) {
         List<ProviderNode> list = new ArrayList<>(providerNodes);
+        // 没有provider
         if(list.size() == 0){
             return null;
         }
@@ -29,14 +28,15 @@ public abstract class AbstractLoadBalance implements LoadBalance{
             return list.get(0);
         }else{
             // 执行负载均衡逻辑
-            return doSelect(list);
+            return doSelect(list, request);
         }
     }
 
     /**
      * 最终选择逻辑
      * @param providerNodes provider集合
+     * @param request {@link RpcRequest}
      * @return {@link ProviderNode}
      */
-    public abstract ProviderNode doSelect(List<ProviderNode> providerNodes);
+    public abstract ProviderNode doSelect(List<ProviderNode> providerNodes, RpcRequest request);
 }

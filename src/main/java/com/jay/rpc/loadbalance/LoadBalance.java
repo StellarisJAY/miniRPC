@@ -1,5 +1,6 @@
 package com.jay.rpc.loadbalance;
 
+import com.jay.rpc.entity.RpcRequest;
 import com.jay.rpc.registry.ProviderNode;
 import com.jay.rpc.spi.SPI;
 
@@ -19,7 +20,8 @@ public interface LoadBalance {
     /**
      * 选择provider
      * @param providerNodes provider集合
+     * @param request {@link RpcRequest}
      * @return {@link ProviderNode}
      */
-    ProviderNode select(Set<ProviderNode> providerNodes);
+    ProviderNode select(Set<ProviderNode> providerNodes, RpcRequest request);
 }
