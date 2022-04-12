@@ -19,7 +19,6 @@ import com.jay.rpc.loadbalance.LoadBalance;
 import com.jay.rpc.registry.LocalRegistry;
 import com.jay.rpc.registry.ProviderNode;
 import com.jay.rpc.registry.Registry;
-import com.jay.rpc.registry.SimpleRegistry;
 import com.jay.rpc.remoting.RpcCommandFactory;
 import com.jay.rpc.remoting.RpcConnectionFactory;
 import com.jay.rpc.remoting.RpcProtocol;
@@ -88,12 +87,8 @@ public class MiniRpcClient {
         String loadBalanceType = MiniRpcConfigs.loadBalanceType();
         this.maxConnections = MiniRpcConfigs.maxConnections();
 
-        if(!MiniRpcConfigs.SIMPLE_REGISTRY.equals(registryType)){
-            ExtensionLoader<Registry> registryLoader = ExtensionLoader.getExtensionLoader(Registry.class);
-            this.registry = registryLoader.getExtension(registryType);
-        }else{
-            this.registry = new SimpleRegistry(false, client, commandFactory);
-        }
+        ExtensionLoader<Registry> registryLoader = ExtensionLoader.getExtensionLoader(Registry.class);
+        this.registry = registryLoader.getExtension(registryType);
 
         // 初始化本地注册中心
         this.localRegistry.setRemoteRegistry(this.registry);

@@ -1,6 +1,5 @@
 package com.jay.rpc;
 
-import com.jay.dove.DoveClient;
 import com.jay.dove.DoveServer;
 import com.jay.dove.common.AbstractLifeCycle;
 import com.jay.dove.config.DoveConfigs;
@@ -8,15 +7,16 @@ import com.jay.dove.serialize.SerializerManager;
 import com.jay.dove.transport.codec.Codec;
 import com.jay.dove.transport.command.CommandFactory;
 import com.jay.dove.transport.command.CommandHandler;
-import com.jay.dove.transport.connection.ConnectionManager;
 import com.jay.dove.transport.protocol.ProtocolManager;
 import com.jay.rpc.config.MiniRpcConfigs;
 import com.jay.rpc.prometheus.PrometheusServer;
 import com.jay.rpc.registry.LocalRegistry;
 import com.jay.rpc.registry.ProviderNode;
 import com.jay.rpc.registry.Registry;
-import com.jay.rpc.registry.SimpleRegistry;
-import com.jay.rpc.remoting.*;
+import com.jay.rpc.remoting.MiniRpcCodec;
+import com.jay.rpc.remoting.MiniRpcCommandHandler;
+import com.jay.rpc.remoting.RpcCommandFactory;
+import com.jay.rpc.remoting.RpcProtocol;
 import com.jay.rpc.serialize.ProtostuffSerializer;
 import com.jay.rpc.service.LocalServiceCache;
 import com.jay.rpc.service.ServiceInfo;
@@ -42,14 +42,9 @@ public class MiniRpcProvider extends AbstractLifeCycle {
      * dove 服务器
      */
     private final DoveServer server;
-    /**
-     * dove client
-     */
-    private final DoveClient client;
     private final CommandHandler commandHandler;
     private final RpcProtocol rpcProtocol;
     private final LocalRegistry localRegistry;
-    private final CommandFactory commandFactory;
     private final int port;
 
     private final PrometheusServer prometheusServer;
@@ -57,11 +52,8 @@ public class MiniRpcProvider extends AbstractLifeCycle {
     public MiniRpcProvider() {
         // 获取服务器端口
         this.port = MiniRpcConfigs.serverPort();
-        this.commandFactory = new RpcCommandFactory();
+        CommandFactory commandFactory = new RpcCommandFactory();
         Codec miniRpcCodec = new MiniRpcCodec();
-        // 创建客户端和连接管理器
-        ConnectionManager connectionManager = new ConnectionManager(new RpcConnectionFactory());
-        this.client = new DoveClient(connectionManager, commandFactory);
         // 创建本地注册中心缓存
         this.localRegistry = new LocalRegistry();
         this.commandHandler = new MiniRpcCommandHandler(commandFactory, localRegistry);
@@ -85,14 +77,8 @@ public class MiniRpcProvider extends AbstractLifeCycle {
                 .build();
         // 创建注册中心客户端
         Registry registry;
-        if(!MiniRpcConfigs.SIMPLE_REGISTRY.equalsIgnoreCase(registryType)){
-            ExtensionLoader<Registry> registryLoader = ExtensionLoader.getExtensionLoader(Registry.class);
-            registry = registryLoader.getExtension(registryType);
-        }else{
-            boolean isRegistry = MiniRpcConfigs.providerAsRegistry();
-            registry = new SimpleRegistry(isRegistry, client, commandFactory);
-        }
-
+        ExtensionLoader<Registry> registryLoader = ExtensionLoader.getExtensionLoader(Registry.class);
+        registry = registryLoader.getExtension(registryType);
         this.localRegistry.setRemoteRegistry(registry);
         // 初始化远程注册中心
         registry.init();
