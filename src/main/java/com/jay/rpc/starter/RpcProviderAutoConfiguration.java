@@ -3,7 +3,7 @@ package com.jay.rpc.starter;
 import com.jay.rpc.MiniRpcProvider;
 import com.jay.rpc.annotation.RpcService;
 import com.jay.rpc.filter.Filter;
-import com.jay.rpc.filter.FilterCollection;
+import com.jay.rpc.filter.FilterChain;
 import com.jay.rpc.filter.RpcFilter;
 import com.jay.rpc.service.LocalServiceCache;
 import com.jay.rpc.service.ServiceInfo;
@@ -60,7 +60,7 @@ public class RpcProviderAutoConfiguration implements InitializingBean, Applicati
                     for (String exclusion : exclusions) {
                         filter.addExclusion(exclusion);
                     }
-                    FilterCollection.addFilter(filter);
+                    FilterChain.addFilter(filter);
                 }catch (Throwable e){
                     e.printStackTrace();
                 }
