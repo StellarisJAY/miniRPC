@@ -7,13 +7,16 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * <p>
- *
+ *  provider端的服务实现类缓存
  * </p>
  *
  * @author Jay
  * @date 2022/03/22 13:35
  */
 public class LocalServiceCache {
+    /**
+     * 服务实现类Map
+     */
     private static final ConcurrentHashMap<ServiceInfo, ServiceInstance> INSTANCES = new ConcurrentHashMap<>();
 
     public static ServiceInstance getServiceInstance(ServiceInfo serviceInfo){
