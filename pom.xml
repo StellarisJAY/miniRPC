@@ -12,6 +12,7 @@
         <module>mini-rpc-core</module>
         <module>mini-rpc-springboot-starter</module>
         <module>mini-rpc-redis-registry</module>
+        <module>mini-rpc-nacos-registry</module>
     </modules>
 
 
