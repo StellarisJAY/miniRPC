@@ -43,4 +43,8 @@ public class ConfigsManager {
         String property = get(name);
         return property != null ? Boolean.parseBoolean(property) : defaultValue;
     }
+
+    public static Properties getProperties(){
+        return properties;
+    }
 }

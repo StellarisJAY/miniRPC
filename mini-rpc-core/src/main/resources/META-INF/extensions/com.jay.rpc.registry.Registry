@@ -1,2 +1,3 @@
 zookeeper=com.jay.rpc.registry.zk.ZookeeperRegistry
 redis=com.jay.rpc.registry.redis.RedisRegistry
+nacos=com.jay.rpc.registry.nacos.NacosRegistry
