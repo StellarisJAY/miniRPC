@@ -15,7 +15,7 @@ public class MiniRpcConfigs {
 
     private static final String REGISTRY_TYPE = "mini-rpc.registry.type";
     private static final String DEFAULT_REGISTRY_TYPE = "zookeeper";
-    public static final String SIMPLE_REGISTRY = "simple";
+
     private static final String LOAD_BALANCE_TYPE = "mini-rpc.client.load-balance";
     private static final String DEFAULT_LOAD_BALANCE_TYPE = "consistent-hash";
 
@@ -51,6 +51,15 @@ public class MiniRpcConfigs {
 
     public static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
 
+    private static final String NACOS_ADDRESS = "mini-rpc.registry.nacos.address";
+    private static final String DEFAULT_NACOS_ADDRESS = "127.0.0.1:8848";
+
+    private static final String NACOS_USER = "mini-rpc.registry.nacos.user";
+    private static final String DEFAULT_NACOS_USER = "nacos";
+
+    private static final String NACOS_PASSWORD = "mini-rpc.registry.nacos.password";
+    private static final String DEFAULT_NACOS_PASSWORD = "nacos";
+
     /**
      * 注册超时时间，60s
      */
@@ -77,18 +86,6 @@ public class MiniRpcConfigs {
     }
 
 
-    public static boolean providerAsRegistry(){
-        return ConfigsManager.getBoolean(PROVIDER_AS_REGISTRY, DEFAULT_PROVIDER_AS_REGISTRY);
-    }
-
-    public static String simpleRegistryHost(){
-        return ConfigsManager.get(SIMPLE_REGISTRY_HOST);
-    }
-
-    public static int simpleRegistryPort(){
-        return ConfigsManager.getInt(SIMPLE_REGISTRY_PORT, DEFAULT_SIMPLE_REGISTRY_PORT);
-    }
-
     public static String redisHost(){
         return ConfigsManager.get(REDIS_HOST);
     }
@@ -107,5 +104,17 @@ public class MiniRpcConfigs {
 
     public static int prometheusServerPort(){
         return ConfigsManager.getInt(PROMETHEUS_SERVER_PORT, DEFAULT_PROMETHEUS_PORT);
+    }
+
+    public static String nacosAddress(){
+        return ConfigsManager.get(NACOS_ADDRESS, DEFAULT_NACOS_ADDRESS);
+    }
+
+    public static String nacosUser(){
+        return ConfigsManager.get(NACOS_USER, DEFAULT_NACOS_USER);
+    }
+
+    public static String nacosPassword(){
+        return ConfigsManager.get(NACOS_PASSWORD, DEFAULT_NACOS_PASSWORD);
     }
 }
