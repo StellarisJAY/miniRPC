@@ -149,15 +149,16 @@ public class ExtensionLoader<T> {
                         String name = parts[0];
                         String className = parts[1];
                         if(name.length() > 0 && className.length() > 0){
-                            classes.put(name, classLoader.loadClass(className));
+                            try{
+                                classes.put(name, classLoader.loadClass(className));
+                            }catch (ClassNotFoundException ignored){
+                            }
                         }
                     }
                 }
             }
         }catch (IOException e){
             log.error("load extension file error ", e);
-        } catch (ClassNotFoundException e) {
-            log.error("load extension class error ", e);
         }
     }
 }
