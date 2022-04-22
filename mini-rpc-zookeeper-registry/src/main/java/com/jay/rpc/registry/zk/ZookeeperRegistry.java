@@ -155,7 +155,6 @@ public class ZookeeperRegistry implements Registry {
             if(idx != -1) {
                 String substring = path.substring(idx + ROOT_PATH.length() + 1);
                 String[] parts = substring.split("/");
-                String serviceName = parts[0];
                 int version = Integer.parseInt(parts[1]);
                 Class<?> type = ClassUtils.resolveClassName(parts[0], getClass().getClassLoader());
                 return new ServiceInfo(type, version);
