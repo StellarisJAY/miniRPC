@@ -23,8 +23,8 @@ Mini-RPC提供SpringBoot支持，添加Mini-RPC-SpringBoot starter依赖即可�
 ```xml-dtd
 <dependency>
 	<groupId>com.jay</groupId>
-    <artifactId>mini-rpc-spring-boot-starter</artifactId>
-    <version>1.0-SNAPSHOT</version>
+	<artifactId>mini-rpc-spring-boot-starter</artifactId>
+	<version>1.0-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -115,8 +115,8 @@ public class Consumer {
 ```java
 @RestController
 public class TestController {
-    // 在注解中指定调用服务的版本
-    @RpcAutowired(version = 1)
+    // 在注解中指定调用服务的版本，也可以指定Provider地址
+    @RpcAutowired(version = 1, provider="127.0.0.1:9999")
     private HelloService helloService;
 
     @GetMapping("/test/v1/{name}")
@@ -144,15 +144,17 @@ public class MyFilter extends AbstractFilter {
 
 
 
-## Client注册中心缓存
-
-服务列表会被Consumer客户端缓存，Mini-RPC使用发布订阅的方式保证缓存一致性。
-
-
-
 ## Zookeeper注册中心
 
-Mini-RPC默认使用Zookeeper作为配置中心，所以不需要添加额外依赖。只需要在配置文件中添加以下内容：
+添加Zookeeper依赖，配置文件中修改配置
+
+```xml-dtd
+<dependency>
+	<groupId>com.jay</groupId>
+	<artifactId>mini-rpc-nacos-registry</artifactId>
+	<version>1.0-SNAPSHOT</version>
+</dependency>
+```
 
 ```properties
 # 注册中心类型
@@ -180,8 +182,8 @@ Mini-RPC使用**CuratorFramework**的**TreeCacheListener**来监听Zookeeper注�
 ```xml-dtd
 <dependency>
 	<groupId>com.jay</groupId>
-    <artifactId>mini-rpc-redis-registry</artifactId>
-    <version>1.0-SNAPSHOT</version>
+	<artifactId>mini-rpc-redis-registry</artifactId>
+	<version>1.0-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -208,8 +210,8 @@ mini-rpc.registry.redis.port = 6379
 ```xml-dtd
 <dependency>
 	<groupId>com.jay</groupId>
-    <artifactId>mini-rpc-nacos-registry</artifactId>
-    <version>1.0-SNAPSHOT</version>
+	<artifactId>mini-rpc-nacos-registry</artifactId>
+	<version>1.0-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -269,4 +271,68 @@ public class MyTest {
 ```
 
 ## 性能测试
+
+### 测试1
+
+单线程发送10万次请求
+
+```java
+	@Test
+    public void singleThread(){
+        HelloService instance = (HelloService) MiniRpcProxy.createInstance(HelloService.class, 1);
+		
+        long testStart = System.currentTimeMillis();
+        int loop = 100000;
+        for(int i = 0; i < loop; i++){
+            String hello = instance.hello("name");
+            Assert.assertEquals("hello v1 name", hello);
+        }
+        long timeUsed = System.currentTimeMillis() - testStart;
+        log.info("测试结束，用时：{}ms，QPS：{}", timeUsed, (loop * 1000) / timeUsed);
+    }
+```
+
+测试结果如下，QPS为8000左右
+
+```
+2022-04-22 11:56:17,143 [main] INFO - 测试结束，用时：12125ms，QPS：8247
+```
+
+### 测试2
+
+1000个线程并发，每个线程发送100次请求
+
+```java
+	@Test
+    public void concurrent() throws InterruptedException {
+        HelloService instance = (HelloService) MiniRpcProxy.createInstance(HelloService.class, 1);
+        
+        int threadCount = 1000;
+        int loop = 100;
+        int total = threadCount * loop;
+        CountDownLatch countDownLatch = new CountDownLatch(threadCount);
+
+        Runnable task = ()->{
+            for(int j = 0; j < loop; j++){
+                String hello = instance.hello("name");
+                Assert.assertEquals("hello v1 name", hello);
+            }
+            countDownLatch.countDown();
+        };
+
+        long testStart = System.currentTimeMillis();
+        for(int i = 0; i < threadCount; i++){
+            new Thread(task).start();
+        }
+        countDownLatch.await();
+        long timeUsed = System.currentTimeMillis() - testStart;
+        log.info("测试结束，用时：{}ms，QPS：{}", timeUsed, (total * 1000L) / timeUsed);
+    }
+```
+
+测试结果如下，并发环境下的QPS大约为3万
+
+```
+2022-04-22 12:01:54,802 [main] INFO - 测试结束，用时：2772ms，QPS：36075
+```
 
