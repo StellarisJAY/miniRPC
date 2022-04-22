@@ -13,6 +13,7 @@
         <module>mini-rpc-springboot-starter</module>
         <module>mini-rpc-redis-registry</module>
         <module>mini-rpc-nacos-registry</module>
+        <module>mini-rpc-zookeeper-registry</module>
     </modules>
 
 

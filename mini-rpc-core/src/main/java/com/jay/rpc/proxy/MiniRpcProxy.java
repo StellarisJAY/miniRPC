@@ -1,5 +1,6 @@
 package com.jay.rpc.proxy;
 
+import com.jay.dove.transport.Url;
 import com.jay.rpc.client.MiniRpcClient;
 import com.jay.rpc.entity.RpcRequest;
 import com.jay.rpc.entity.RpcResponse;
@@ -37,6 +38,30 @@ public class MiniRpcProxy {
                     .build();
             // 发送请求
             RpcResponse response = CLIENT.sendRequest(request);
+            if(response.getException() != null){
+                throw response.getException();
+            }
+            return response.getResult();
+        });
+    }
+
+    /**
+     * 创建指定目标地址的RPC代理类
+     * @param targetClass {@link Class} 接口类
+     * @param version 服务版本号
+     * @param targetUrl 目标地址
+     * @return 代理对象
+     */
+    public static Object createInstance(Class<?> targetClass, int version, Url targetUrl){
+        return Proxy.newProxyInstance(MiniRpcProxy.class.getClassLoader(), new Class[]{targetClass}, (proxy, method, args) -> {
+            // 创建request
+            RpcRequest request = RpcRequest.builder().methodName(method.getName())
+                    .parameters(args)
+                    .parameterTypes(method.getParameterTypes())
+                    .version(version)
+                    .type(targetClass)
+                    .build();
+            RpcResponse response = CLIENT.sendRequest(request, targetUrl);
             if(response.getException() != null){
                 throw response.getException();
             }

@@ -75,19 +75,23 @@ public class MiniRpcProvider extends AbstractLifeCycle {
                 .weight(10)
                 .lastHeartBeatTime(System.currentTimeMillis())
                 .build();
-        // 创建注册中心客户端
-        Registry registry;
-        ExtensionLoader<Registry> registryLoader = ExtensionLoader.getExtensionLoader(Registry.class);
-        registry = registryLoader.getExtension(registryType);
-        this.localRegistry.setRemoteRegistry(registry);
-        // 初始化远程注册中心
-        registry.init();
-        registry.setLocalRegistry(localRegistry);
-        List<ServiceInfo> services = LocalServiceCache.listServices();
-        // 注册当前provider
-        registry.registerProvider(services, node);
-        // 开启注册中心心跳
-        registry.startHeartBeat(services, node);
+        /*
+            创建注册中心客户端
+            如果没有配置注册中心，则以无注册中心模式启动
+         */
+        if(!registryType.equalsIgnoreCase(MiniRpcConfigs.NONE_REGISTRY)){
+            ExtensionLoader<Registry> registryLoader = ExtensionLoader.getExtensionLoader(Registry.class);
+            Registry registry = registryLoader.getExtension(registryType);
+            this.localRegistry.setRemoteRegistry(registry);
+            // 初始化远程注册中心
+            registry.init();
+            registry.setLocalRegistry(localRegistry);
+            List<ServiceInfo> services = LocalServiceCache.listServices();
+            // 注册当前provider
+            registry.registerProvider(services, node);
+            // 开启注册中心心跳
+            registry.startHeartBeat(services, node);
+        }
     }
 
     @Override

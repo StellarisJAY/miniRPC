@@ -35,7 +35,12 @@ public class LocalRegistry {
      */
     public Set<ProviderNode> lookUpProviders(String serviceName, int version){
         // 如果本地Registry缓存没有，就从远程Registry拉取
-        registryCache.computeIfAbsent(serviceName + "-" + version, (key)-> remoteRegistry.lookupProviders(serviceName, version));
+        registryCache.computeIfAbsent(serviceName + "-" + version, (key)-> {
+            if(remoteRegistry != null){
+                return remoteRegistry.lookupProviders(serviceName, version);
+            }
+            return null;
+        });
         return registryCache.get(serviceName + "-" + version);
     }
 
@@ -72,5 +77,9 @@ public class LocalRegistry {
                 return v;
             });
         }
+    }
+
+    public void updateProviderList(String serviceName, Set<ProviderNode> providerNodes){
+        registryCache.put(serviceName, providerNodes);
     }
 }
