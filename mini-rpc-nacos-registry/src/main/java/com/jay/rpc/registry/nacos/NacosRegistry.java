@@ -70,6 +70,8 @@ public class NacosRegistry implements Registry {
         try{
             Properties properties = new Properties();
             properties.setProperty("serverAddr", MiniRpcConfigs.nacosAddress());
+            properties.setProperty("username", MiniRpcConfigs.nacosUser());
+            properties.setProperty("password", MiniRpcConfigs.nacosPassword());
             log.info("Naming service properties: {}", properties);
             namingService = NamingFactory.createNamingService(properties);
         }catch (NacosException e){
