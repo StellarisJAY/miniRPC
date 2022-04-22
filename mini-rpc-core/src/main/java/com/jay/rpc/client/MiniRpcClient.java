@@ -52,11 +52,7 @@ public class MiniRpcClient {
     /**
      * 本地注册中心缓存
      */
-    private LocalRegistry localRegistry;
-    /**
-     * 远程注册中心客户端
-     */
-    private Registry registry;
+    private final LocalRegistry localRegistry;
     /**
      * 负载均衡器
      */
@@ -86,15 +82,19 @@ public class MiniRpcClient {
         String registryType = MiniRpcConfigs.registryType();
         String loadBalanceType = MiniRpcConfigs.loadBalanceType();
         this.maxConnections = MiniRpcConfigs.maxConnections();
+        if(!registryType.equalsIgnoreCase(MiniRpcConfigs.NONE_REGISTRY)){
+            ExtensionLoader<Registry> registryLoader = ExtensionLoader.getExtensionLoader(Registry.class);
+            /*
+             * 远程注册中心客户端
+             */
+            Registry registry = registryLoader.getExtension(registryType);
 
-        ExtensionLoader<Registry> registryLoader = ExtensionLoader.getExtensionLoader(Registry.class);
-        this.registry = registryLoader.getExtension(registryType);
-
-        // 初始化本地注册中心
-        this.localRegistry.setRemoteRegistry(this.registry);
-        // 初始化远程注册中心客户端
-        this.registry.init();
-        this.registry.setLocalRegistry(localRegistry);
+            // 初始化本地注册中心
+            this.localRegistry.setRemoteRegistry(registry);
+            // 初始化远程注册中心客户端
+            registry.init();
+            registry.setLocalRegistry(localRegistry);
+        }
         // 加载负载均衡器
         ExtensionLoader<LoadBalance> loadBalanceLoader = ExtensionLoader.getExtensionLoader(LoadBalance.class);
         this.loadBalance = loadBalanceLoader.getExtension(loadBalanceType);
@@ -122,6 +122,30 @@ public class MiniRpcClient {
         InvokeFuture invokeFuture = client.sendFuture(url, requestCommand, null);
         // 等待结果
         RpcRemotingCommand responseCommand = (RpcRemotingCommand) invokeFuture.awaitResponse();
+        return processResponse(responseCommand);
+    }
+
+    /**
+     * 向指定地址发送RPC请求
+     * @param request {@link RpcRequest}
+     * @param url {@link Url} 目标地址
+     * @return {@link RpcResponse}
+     * @throws InterruptedException e
+     */
+    public RpcResponse sendRequest(RpcRequest request, Url url) throws InterruptedException {
+        RemotingCommand command = commandFactory.createRequest(request, RpcProtocol.REQUEST, RpcRequest.class);
+        url.setExpectedConnectionCount(MiniRpcConfigs.maxConnections());
+        RpcRemotingCommand response = (RpcRemotingCommand) client.sendSync(url, command, null);
+        return processResponse(response);
+    }
+
+    /**
+     * 处理收到的回复报文
+     * 首先判断回复的命令类型，然后检查报文完整性
+     * @param responseCommand {@link RpcRemotingCommand}
+     * @return {@link RpcResponse}
+     */
+    private RpcResponse processResponse(RpcRemotingCommand responseCommand){
         if(responseCommand.getCommandCode().equals(RpcProtocol.RESPONSE)){
             // 获得response
             byte[] content = responseCommand.getContent();
@@ -150,6 +174,7 @@ public class MiniRpcClient {
         }
     }
 
+
     /**
      * 查询服务提供者
      * @param request {@link RpcRequest}
@@ -158,6 +183,9 @@ public class MiniRpcClient {
     private Url lookupProvider(RpcRequest request){
         // 本地缓存获取provider
         Set<ProviderNode> providerNodes = localRegistry.lookUpProviders(request.getType().getName(), request.getVersion());
+        if(providerNodes == null || providerNodes.isEmpty()){
+            return null;
+        }
         ProviderNode provider = loadBalance.select(providerNodes, request);
         return provider == null ? null : Url.parseString(provider.getUrl());
     }
