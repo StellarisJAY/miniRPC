@@ -14,7 +14,7 @@ import java.nio.charset.StandardCharsets;
 public class MiniRpcConfigs {
 
     private static final String REGISTRY_TYPE = "mini-rpc.registry.type";
-    private static final String DEFAULT_REGISTRY_TYPE = "zookeeper";
+    public static final String NONE_REGISTRY = "none";
 
     private static final String LOAD_BALANCE_TYPE = "mini-rpc.client.load-balance";
     private static final String DEFAULT_LOAD_BALANCE_TYPE = "consistent-hash";
@@ -27,13 +27,6 @@ public class MiniRpcConfigs {
 
     private static final String SERVER_PORT = "mini-rpc.server.port";
     private static final int DEFAULT_SERVER_PORT = 9000;
-
-    private static final String PROVIDER_AS_REGISTRY = "mini-rpc.registry.provider-as-registry";
-    private static final boolean DEFAULT_PROVIDER_AS_REGISTRY = false;
-
-    private static final String SIMPLE_REGISTRY_HOST = "mini-rpc.registry.simple.host";
-    private static final String SIMPLE_REGISTRY_PORT = "mini-rpc.registry.simple.port";
-    private static final int DEFAULT_SIMPLE_REGISTRY_PORT = 9999;
 
     private static final String REDIS_HOST = "mini-rpc.registry.redis.host";
     private static final String REDIS_PORT = "mini-rpc.registry.redis.port";
@@ -66,7 +59,7 @@ public class MiniRpcConfigs {
     public static final long REGISTER_TIMEOUT = 60 * 1000;
 
     public static String registryType(){
-        return ConfigsManager.get(REGISTRY_TYPE, DEFAULT_REGISTRY_TYPE);
+        return ConfigsManager.get(REGISTRY_TYPE, NONE_REGISTRY);
     }
 
     public static String loadBalanceType(){
