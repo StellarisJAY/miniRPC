@@ -3,6 +3,9 @@ package com.jay.rpc.registry.nacos;
 import com.alibaba.nacos.api.exception.NacosException;
 import com.alibaba.nacos.api.naming.NamingFactory;
 import com.alibaba.nacos.api.naming.NamingService;
+import com.alibaba.nacos.api.naming.listener.Event;
+import com.alibaba.nacos.api.naming.listener.EventListener;
+import com.alibaba.nacos.api.naming.listener.NamingEvent;
 import com.alibaba.nacos.api.naming.pojo.Instance;
 import com.alibaba.nacos.api.naming.pojo.builder.InstanceBuilder;
 import com.jay.rpc.config.MiniRpcConfigs;
@@ -35,14 +38,15 @@ public class NacosRegistry implements Registry {
     @Override
     public Set<ProviderNode> lookupProviders(String serviceName, int version) {
         try{
-            List<Instance> instances = namingService.getAllInstances(serviceName + "/" + version, true);
+            List<Instance> instances = namingService.getAllInstances(serviceName + "-" + version, true);
+            namingService.subscribe(serviceName + "-" + version, new NacosEventListener(localRegistry));
             return instances.stream()
                     .map(instance -> ProviderNode.builder().url(instance.getIp() + ":" + instance.getPort())
                             .weight((int) instance.getWeight())
                             .build())
                     .collect(Collectors.toSet());
         }catch (Exception e){
-            log.warn("Failed to lookup provider for: {}", serviceName + "/" + version, e);
+            log.warn("Failed to lookup provider for: {}", serviceName + "-" + version, e);
         }
         return null;
     }
@@ -58,7 +62,8 @@ public class NacosRegistry implements Registry {
                         .setPort(port)
                         .setWeight((double) node.getWeight())
                         .setHealthy(true).build();
-                namingService.registerInstance(service.getType().getName() + "/" + service.getVersion(), instance);
+                String serviceName = service.getType().getName() + "-" + service.getVersion();
+                namingService.registerInstance(serviceName, instance);
             }
         }catch (Exception e){
             throw new RuntimeException("Register provider failed ", e);
@@ -88,5 +93,27 @@ public class NacosRegistry implements Registry {
     @Override
     public void setLocalRegistry(LocalRegistry localRegistry) {
         this.localRegistry = localRegistry;
+    }
+
+    static class NacosEventListener implements EventListener{
+        private final LocalRegistry localRegistry;
+
+        NacosEventListener(LocalRegistry localRegistry) {
+            this.localRegistry = localRegistry;
+        }
+
+        @Override
+        public void onEvent(Event event) {
+            if(event instanceof NamingEvent){
+                NamingEvent namingEvent = (NamingEvent) event;
+                String serviceName = namingEvent.getServiceName();
+                Set<ProviderNode> providers = namingEvent.getInstances().stream().map(instance -> ProviderNode.builder().url(instance.getIp() + ":" + instance.getPort())
+                                .weight((int) instance.getWeight())
+                                .build())
+                        .collect(Collectors.toSet());
+                log.info("Provider List changed, serviceName: {}, instances: {}", serviceName, providers);
+                localRegistry.updateProviderList(serviceName, providers);
+            }
+        }
     }
 }

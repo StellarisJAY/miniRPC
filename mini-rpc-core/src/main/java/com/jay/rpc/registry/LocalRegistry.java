@@ -78,4 +78,8 @@ public class LocalRegistry {
             });
         }
     }
+
+    public void updateProviderList(String serviceName, Set<ProviderNode> providerNodes){
+        registryCache.put(serviceName, providerNodes);
+    }
 }
