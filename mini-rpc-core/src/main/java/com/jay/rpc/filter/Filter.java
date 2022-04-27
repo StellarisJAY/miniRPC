@@ -11,6 +11,11 @@ import com.jay.rpc.entity.RpcRequest;
  * @date 2022/04/06 14:33
  */
 public interface Filter {
+
+    /**
+     * 初始化Filter
+     */
+    void init();
     /**
      * 过滤请求
      * @param request {@link RpcRequest}
