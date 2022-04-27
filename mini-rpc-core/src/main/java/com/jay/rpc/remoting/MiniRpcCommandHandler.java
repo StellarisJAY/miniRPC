@@ -3,7 +3,6 @@ package com.jay.rpc.remoting;
 import com.jay.dove.transport.command.AbstractCommandHandler;
 import com.jay.dove.transport.command.CommandFactory;
 import com.jay.rpc.processor.RpcRequestProcessor;
-import com.jay.rpc.processor.SimpleRegistryProcessor;
 import com.jay.rpc.registry.LocalRegistry;
 
 /**
@@ -19,8 +18,5 @@ public class MiniRpcCommandHandler extends AbstractCommandHandler {
         super(commandFactory);
         // RPC 请求处理器
         this.registerProcessor(RpcProtocol.REQUEST, new RpcRequestProcessor(commandFactory));
-        // Simple注册中心命令处理器
-        this.registerProcessor(RpcProtocol.REGISTER, new SimpleRegistryProcessor(localRegistry, commandFactory));
-        this.registerProcessor(RpcProtocol.LOOKUP, new SimpleRegistryProcessor(localRegistry, commandFactory));
     }
 }
