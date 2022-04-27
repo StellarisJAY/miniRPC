@@ -60,6 +60,7 @@ public class RpcProviderAutoConfiguration implements InitializingBean, Applicati
                     for (String exclusion : exclusions) {
                         filter.addExclusion(exclusion);
                     }
+                    filter.init();
                     FilterChain.addFilter(filter);
                 }catch (Throwable e){
                     e.printStackTrace();
