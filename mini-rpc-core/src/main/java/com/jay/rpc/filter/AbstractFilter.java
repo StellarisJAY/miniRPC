@@ -25,6 +25,11 @@ public abstract class AbstractFilter implements Filter{
     }
 
     @Override
+    public void init(){
+
+    }
+
+    @Override
     public boolean filter(RpcRequest request) {
         Class<?> type = request.getType();
         int version = request.getVersion();

@@ -1,6 +1,5 @@
-package com.jay.rpc.prometheus;
+package com.jay.rpc.metric.prometheus;
 
-import com.jay.dove.common.AbstractLifeCycle;
 import com.jay.rpc.config.MiniRpcConfigs;
 import io.prometheus.client.Collector;
 import io.prometheus.client.exporter.HTTPServer;
@@ -19,7 +18,7 @@ import java.util.List;
  * @date 2022/02/28 15:42
  */
 @Slf4j
-public class PrometheusServer extends AbstractLifeCycle {
+public class PrometheusServer {
 
     private HTTPServer httpServer;
     private final List<Collector> collectors = new LinkedList<>();
@@ -43,19 +42,14 @@ public class PrometheusServer extends AbstractLifeCycle {
         this.httpServer = new HTTPServer(MiniRpcConfigs.prometheusServerPort(), true);
     }
 
-    @Override
     public void startup() {
-        super.startup();
         try{
             init();
         }catch (Exception e){
             log.error("prometheus server error ", e);
         }
     }
-
-    @Override
     public void shutdown() {
-        super.shutdown();
         httpServer.stop();
     }
 }

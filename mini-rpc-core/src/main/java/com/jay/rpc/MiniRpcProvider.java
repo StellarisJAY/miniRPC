@@ -9,7 +9,6 @@ import com.jay.dove.transport.command.CommandFactory;
 import com.jay.dove.transport.command.CommandHandler;
 import com.jay.dove.transport.protocol.ProtocolManager;
 import com.jay.rpc.config.MiniRpcConfigs;
-import com.jay.rpc.prometheus.PrometheusServer;
 import com.jay.rpc.registry.LocalRegistry;
 import com.jay.rpc.registry.ProviderNode;
 import com.jay.rpc.registry.Registry;
@@ -47,8 +46,6 @@ public class MiniRpcProvider extends AbstractLifeCycle {
     private final LocalRegistry localRegistry;
     private final int port;
 
-    private final PrometheusServer prometheusServer;
-
     public MiniRpcProvider() {
         // 获取服务器端口
         this.port = MiniRpcConfigs.serverPort();
@@ -63,7 +60,6 @@ public class MiniRpcProvider extends AbstractLifeCycle {
         }
         this.server = new DoveServer(miniRpcCodec, port, commandFactory);
         this.rpcProtocol = new RpcProtocol(commandHandler);
-        this.prometheusServer = new PrometheusServer();
     }
 
     private void init() throws UnknownHostException {
@@ -108,8 +104,6 @@ public class MiniRpcProvider extends AbstractLifeCycle {
             this.commandHandler.registerDefaultExecutor(ThreadPoolUtil.newIoThreadPool("rpc-command-handler-"));
             // 启动producer服务器
             this.server.startup();
-            // 启动prometheus监控
-            this.prometheusServer.startup();
             log.info("provider 启动完成，用时： {} ms", (System.currentTimeMillis() - start));
         }catch (Exception e){
             log.error("Provider 启动失败");
