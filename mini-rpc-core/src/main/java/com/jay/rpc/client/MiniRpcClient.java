@@ -34,6 +34,7 @@ import org.springframework.aop.ThrowsAdvice;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.zip.CRC32;
 
@@ -158,7 +159,6 @@ public class MiniRpcClient {
     public void sendRequestAsync(RpcRequest request, AsyncCallback callback){
         // 创建请求报文，command工厂序列化
         RemotingCommand requestCommand = commandFactory.createRequest(request, RpcProtocol.REQUEST, RpcRequest.class);
-
         // 获取producer地址
         Url url = lookupProvider(request);
         if(url == null){
@@ -184,6 +184,35 @@ public class MiniRpcClient {
             });
         }
     }
+
+    public CompletableFuture<RpcResponse> sendFuture(RpcRequest request){
+        CompletableFuture<RpcResponse> future = new CompletableFuture<>();
+        // 创建请求报文，command工厂序列化
+        RemotingCommand requestCommand = commandFactory.createRequest(request, RpcProtocol.REQUEST, RpcRequest.class);
+        // 获取producer地址
+        Url url = lookupProvider(request);
+        if(url == null){
+            future.completeExceptionally(new NullPointerException("No provider server found for: " + request.getMethodName()));
+        }else {
+            url.setExpectedConnectionCount(maxConnections);
+            // 发送请求，获得future
+            InvokeFuture invokeFuture = client.sendFuture(url, requestCommand, null);
+            asyncExecutor.execute(()->{
+                try{
+                    RpcRemotingCommand responseCommand = (RpcRemotingCommand) invokeFuture.awaitResponse();
+                    RpcResponse response = processResponse(responseCommand);
+                    if(response.getException() != null){
+                        throw response.getException();
+                    }
+                    future.complete(response);
+                }catch (Throwable throwable){
+                    future.completeExceptionally(throwable);
+                }
+            });
+        }
+        return future;
+    }
+
 
     /**
      * 处理收到的回复报文

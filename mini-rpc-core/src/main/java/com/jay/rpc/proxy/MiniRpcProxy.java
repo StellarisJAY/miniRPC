@@ -8,6 +8,7 @@ import com.jay.rpc.entity.RpcResponse;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * <p>
@@ -79,7 +80,7 @@ public class MiniRpcProxy {
      * @param callback {@link AsyncCallback}
      * @param args 参数列表
      */
-    public static void asyncCall(Class<?> targetClass, int version, Method method, AsyncCallback callback, Object[] args){
+    public static void callAsync(Class<?> targetClass, int version, Method method, AsyncCallback callback, Object[] args){
         // 创建request
         RpcRequest request = RpcRequest.builder().methodName(method.getName())
                 .parameters(args)
@@ -88,5 +89,24 @@ public class MiniRpcProxy {
                 .type(targetClass)
                 .build();
         CLIENT.sendRequestAsync(request, callback);
+    }
+
+    /**
+     * Future调用
+     * @param targetClass 目标接口类
+     * @param version 版本号
+     * @param method 目标方法
+     * @param args 参数列表
+     * @return {@link CompletableFuture}
+     */
+    public static CompletableFuture<RpcResponse> callFuture(Class<?> targetClass, int version, Method method, Object[] args){
+        // 创建request
+        RpcRequest request = RpcRequest.builder().methodName(method.getName())
+                .parameters(args)
+                .parameterTypes(method.getParameterTypes())
+                .version(version)
+                .type(targetClass)
+                .build();
+        return CLIENT.sendFuture(request);
     }
 }
