@@ -30,13 +30,14 @@ public class RpcProviderAutoConfiguration implements InitializingBean, Applicati
     private ApplicationContext applicationContext;
     @Override
     public void afterPropertiesSet() throws Exception {
-        Map<String, Object> beans = applicationContext.getBeansWithAnnotation(RpcService.class);
-        if(beans.size() == 0){
+        Map<String, Object> serviceBeans = applicationContext.getBeansWithAnnotation(RpcService.class);
+        Map<String, Object> filterBeans = applicationContext.getBeansWithAnnotation(RpcFilter.class);
+        if(serviceBeans.size() == 0 && filterBeans.size() == 0){
             return;
         }
         MiniRpcProvider provider = new MiniRpcProvider();
-        // 遍历beans
-        for (Map.Entry<String, Object> entry : beans.entrySet()) {
+        // 遍历serviceBeans
+        for (Map.Entry<String, Object> entry : serviceBeans.entrySet()) {
             Object instance = entry.getValue();
             // 扫描RPCService注解
             if(instance.getClass().isAnnotationPresent(RpcService.class)){
@@ -47,10 +48,13 @@ public class RpcProviderAutoConfiguration implements InitializingBean, Applicati
                 ServiceInfo serviceInfo = new ServiceInfo(type, version);
                 LocalServiceCache.registerServiceInstance(serviceInfo, new ServiceInstance(type, instance));
             }
+        }
+        // 遍历FilterBeans
+        for (Map.Entry<String, Object> entry : filterBeans.entrySet()) {
+            Object instance = entry.getValue();
             // 扫描RpcFilter注解
-            else if(instance.getClass().isAnnotationPresent(RpcFilter.class)){
+            if(instance.getClass().isAnnotationPresent(RpcFilter.class)){
                 RpcFilter annotation = instance.getClass().getAnnotation(RpcFilter.class);
-
                 // 获取注解的exclusions属性
                 String[] exclusions = annotation.exclusions();
                 try{
@@ -66,11 +70,10 @@ public class RpcProviderAutoConfiguration implements InitializingBean, Applicati
                     e.printStackTrace();
                 }
             }
-
         }
+        log.info("Loaded filters: {}", FilterChain.filters());
         // 启动provider服务
         provider.startup();
-        log.info("Mini RPC Provider started");
     }
 
     @Override

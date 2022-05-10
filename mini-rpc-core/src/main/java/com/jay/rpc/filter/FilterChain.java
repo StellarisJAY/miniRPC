@@ -2,6 +2,8 @@ package com.jay.rpc.filter;
 
 import com.jay.rpc.entity.RpcRequest;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Queue;
 
@@ -39,6 +41,10 @@ public class FilterChain {
             }
         }
         return true;
+    }
+
+    public static List<Filter> filters(){
+        return new ArrayList<>(FILTERS);
     }
 
 }
