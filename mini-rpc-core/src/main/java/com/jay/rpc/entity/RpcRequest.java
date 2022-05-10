@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.io.Serializable;
+import java.util.Map;
 
 /**
  * <p>
@@ -38,4 +39,9 @@ public class RpcRequest implements Serializable {
      * 参数列表
      */
     private Object[] parameters;
+
+    /**
+     * openTracing context
+     */
+    private Map<String, String> traceContext;
 }
