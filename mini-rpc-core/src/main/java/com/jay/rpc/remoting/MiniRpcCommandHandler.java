@@ -4,6 +4,7 @@ import com.jay.dove.transport.command.AbstractCommandHandler;
 import com.jay.dove.transport.command.CommandFactory;
 import com.jay.rpc.processor.RpcRequestProcessor;
 import com.jay.rpc.registry.LocalRegistry;
+import io.netty.channel.ChannelHandlerContext;
 
 /**
  * <p>
@@ -18,5 +19,10 @@ public class MiniRpcCommandHandler extends AbstractCommandHandler {
         super(commandFactory);
         // RPC 请求处理器
         this.registerProcessor(RpcProtocol.REQUEST, new RpcRequestProcessor(commandFactory));
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext channelHandlerContext) {
+
     }
 }
