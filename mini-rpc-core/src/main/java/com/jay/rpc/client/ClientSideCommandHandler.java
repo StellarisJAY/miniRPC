@@ -2,6 +2,7 @@ package com.jay.rpc.client;
 
 import com.jay.dove.transport.command.AbstractCommandHandler;
 import com.jay.dove.transport.command.CommandFactory;
+import io.netty.channel.ChannelHandlerContext;
 
 /**
  * <p>
@@ -14,5 +15,10 @@ import com.jay.dove.transport.command.CommandFactory;
 public class ClientSideCommandHandler extends AbstractCommandHandler {
     public ClientSideCommandHandler(CommandFactory commandFactory) {
         super(commandFactory);
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext channelHandlerContext) {
+
     }
 }
