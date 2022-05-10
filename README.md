@@ -1,8 +1,13 @@
 # Mini-RPC
 
-Mini-RPC 是 基于Netty开发的 使用TCP通信的 RPC框架。提供了多种注册中心、服务版本控制、客户端负载均衡、服务端过滤器等功能。
+Mini-RPC 是 基于Netty开发的 使用TCP通信的 RPC框架。提供了多种注册中心、多种调用方法、客户端负载均衡、服务端过滤器等功能。
 
-Mini-RPC提供了SpringBoot-Starter以及各种注解，可以很方便地在SpringBoot项目中使用。
+- [x] 同步、异步、Future三种调用方法
+- [x] SPI机制，提供插件化扩展功能
+- [x] Zookeeper、Nacos、Redis三种注册中心支持
+- [x] 注解化配置方式
+- [x] 多种客户端负载均衡算法
+- [x] 服务端过滤器，可注解化配置的过滤器链，提供exlusions和优先级配置
 
 ## 使用说明
 
@@ -51,8 +56,8 @@ mini-rpc.server.port = 8888
 ```properties
 # 客户端负载均衡算法
 mini-rpc.client.load-balance = random
-# 客户端最大连接数
-mini-rpc.client.max-conn = 20
+# 客户端最大连接数，客户端会按照这个数量去建立连接
+mini-rpc.client.max-conn = 10
 ```
 
 ### 创建服务
@@ -87,28 +92,30 @@ public class HelloServiceImplV2 implements HelloService{
 
 ### 远程调用
 
-使用MiniRpcProxy的createInstance方法创建RPC代理对象。方法参数列表如下：
+MiniRPC支持同步、异步、Future三种调用方式。
+
+#### 同步调用
+
+使用MiniRpcProxy的createInstance方法创建RPC代理对象。该方法参数列表如下：
 
 - 服务接口类
 - 服务名称
 - 版本号
 
 ```java
-public class Consumer {
-    @Test
-    public void test(){
-        // 调用 由 组hello-group中的服务器 提供的hello-service服务
-		HelloService serviceV1 = (HelloService)MiniRpcProxy.createInstance(HelloService.class, "hello-service", 1);
-		// 调用不同版本的服务
-		HelloService serviceV2 = (HelloService)MiniRpcProxy.createInstance(HelloService.class, "hello-service", 2);
+@Test
+public void test(){
+    // 调用 由 组hello-group中的服务器 提供的hello-service服务
+	HelloService serviceV1 = (HelloService)MiniRpcProxy.createInstance(HelloService.class, "hello-service", 1);
+	// 调用不同版本的服务
+	HelloService serviceV2 = (HelloService)MiniRpcProxy.createInstance(HelloService.class, "hello-service", 2);
 
-		log.info("v1: {}", serviceV1.sayHello("world"));
-		log.info("v2: {}", serviceV2.sayHello("world"));
-    }
+	log.info("v1: {}", serviceV1.sayHello("world"));
+	log.info("v2: {}", serviceV2.sayHello("world"));
 }
 ```
 
-### @RpcAutowired注解
+#### @RpcAutowired注解同步调用
 
 使用RpcAutowired注解可以借助Spring容器来加载一个RPC代理对象，具体的用法如下：
 
@@ -123,8 +130,47 @@ public class TestController {
     public String testHelloV1(@PathVariable("name") String name){
         return helloService.hello(name);
     }
-
+}
 ```
+
+#### 异步调用
+
+使用MiniRpcProxy的callAsync方法异步调用，该方法需要指定目标接口、版本号、方法、Callback和参数列表
+
+```java
+public static void callAsync(Class<?> targetClass, int version, Method method, AsyncCallback callback, Object[] args)
+```
+
+Callback需要实现AsyncCallback接口：
+
+```java
+public interface AsyncCallback {
+
+    /**
+     * 收到response
+     * @param response {@link RpcResponse}
+     */
+    void onResponse(RpcResponse response);
+
+    /**
+     * 捕获到异常
+     * @param throwable {@link Throwable}
+     */
+    void exceptionCaught(Throwable throwable);
+}
+```
+
+
+
+#### Future调用
+
+使用MiniRpcProxy的callFuture方法进行Future调用，该方法返回一个CompletableFuture对象。
+
+```java
+public static CompletableFuture<RpcResponse> callFuture(Class<?> targetClass, int version, Method method, Object[] args)
+```
+
+
 
 ### 过滤器
 
