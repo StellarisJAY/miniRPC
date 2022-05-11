@@ -21,13 +21,17 @@ import java.lang.annotation.Target;
 public @interface RpcFilter {
     /**
      * 排除的请求
+     *
      * @return String[] 每个请求的格式：类/版本/方法名
      */
     String[] exclusions();
 
     /**
      * 过滤器优先级
+     *
      * @return int
      */
     int priority() default 100;
+
+    FilterDirection direction();
 }
