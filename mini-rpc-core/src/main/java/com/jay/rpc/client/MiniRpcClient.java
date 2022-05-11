@@ -13,10 +13,10 @@ import com.jay.dove.transport.command.RemotingCommand;
 import com.jay.dove.transport.connection.ConnectionManager;
 import com.jay.dove.transport.protocol.ProtocolManager;
 import com.jay.rpc.callback.AsyncCallback;
-import com.jay.rpc.callback.AsyncInvokeFuture;
 import com.jay.rpc.config.MiniRpcConfigs;
 import com.jay.rpc.entity.RpcRequest;
 import com.jay.rpc.entity.RpcResponse;
+import com.jay.rpc.filter.FilterChain;
 import com.jay.rpc.loadbalance.LoadBalance;
 import com.jay.rpc.registry.LocalRegistry;
 import com.jay.rpc.registry.ProviderNode;
@@ -28,9 +28,7 @@ import com.jay.rpc.remoting.RpcRemotingCommand;
 import com.jay.rpc.serialize.ProtostuffSerializer;
 import com.jay.rpc.spi.ExtensionLoader;
 import com.jay.rpc.util.ThreadPoolUtil;
-import io.protostuff.Rpc;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.aop.ThrowsAdvice;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
@@ -128,6 +126,11 @@ public class MiniRpcClient {
                     .exception(new NullPointerException("No provider found for " + request.getType().getName()))
                     .build();
         }
+        if(!executeFilters(request)){
+            return RpcResponse.builder().result(null)
+                    .exception(new RuntimeException("Request blocked by outbound filters"))
+                    .build();
+        }
         url.setExpectedConnectionCount(maxConnections);
         // 发送请求，获得future
         InvokeFuture invokeFuture = client.sendFuture(url, requestCommand, null);
@@ -146,6 +149,11 @@ public class MiniRpcClient {
     public RpcResponse sendRequest(RpcRequest request, Url url) throws InterruptedException {
         RemotingCommand command = commandFactory.createRequest(request, RpcProtocol.REQUEST, RpcRequest.class);
         url.setExpectedConnectionCount(MiniRpcConfigs.maxConnections());
+        if(!executeFilters(request)){
+            return RpcResponse.builder().result(null)
+                    .exception(new RuntimeException("Request blocked by outbound filters"))
+                    .build();
+        }
         RpcRemotingCommand response = (RpcRemotingCommand) client.sendSync(url, command, null);
         return processResponse(response);
     }
@@ -165,23 +173,28 @@ public class MiniRpcClient {
             callback.exceptionCaught(new NullPointerException("No provider server found for: " + request.getMethodName()));
         }else{
             url.setExpectedConnectionCount(maxConnections);
-            // 发送请求，获得future
-            InvokeFuture invokeFuture = client.sendFuture(url, requestCommand, null);
-            // 异步等待回复
-            asyncExecutor.execute(()->{
-                try{
-                    // await response
-                    RpcRemotingCommand responseCommand = (RpcRemotingCommand) invokeFuture.awaitResponse();
-                    RpcResponse response = processResponse(responseCommand);
-                    if(response.getException() != null){
-                        throw response.getException();
+            if(!executeFilters(request)){
+                callback.exceptionCaught(new RuntimeException("Request blocked by outbound filters"));
+            }
+            else{
+                // 发送请求，获得future
+                InvokeFuture invokeFuture = client.sendFuture(url, requestCommand, null);
+                // 异步等待回复
+                asyncExecutor.execute(()->{
+                    try{
+                        // await response
+                        RpcRemotingCommand responseCommand = (RpcRemotingCommand) invokeFuture.awaitResponse();
+                        RpcResponse response = processResponse(responseCommand);
+                        if(response.getException() != null){
+                            throw response.getException();
+                        }
+                        // callback
+                        callback.onResponse(response);
+                    }catch (Throwable throwable){
+                        callback.exceptionCaught(throwable);
                     }
-                    // callback
-                    callback.onResponse(response);
-                }catch (Throwable throwable){
-                    callback.exceptionCaught(throwable);
-                }
-            });
+                });
+            }
         }
     }
 
@@ -195,6 +208,10 @@ public class MiniRpcClient {
             future.completeExceptionally(new NullPointerException("No provider server found for: " + request.getMethodName()));
         }else {
             url.setExpectedConnectionCount(maxConnections);
+            if(!executeFilters(request)){
+                future.completeExceptionally(new RuntimeException("Request blocked by outbound filters"));
+                return future;
+            }
             // 发送请求，获得future
             InvokeFuture invokeFuture = client.sendFuture(url, requestCommand, null);
             asyncExecutor.execute(()->{
@@ -249,6 +266,9 @@ public class MiniRpcClient {
         }
     }
 
+    private boolean executeFilters(RpcRequest request){
+        return FilterChain.executeOutboundFilters(request);
+    }
 
     /**
      * 查询服务提供者

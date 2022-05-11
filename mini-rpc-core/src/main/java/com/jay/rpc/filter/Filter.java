@@ -40,4 +40,16 @@ public interface Filter {
      * @param request 格式：class/version/method
      */
     void addExclusion(String request);
+
+    /**
+     * 获取Filter方向
+     * @return {@link FilterDirection}
+     */
+    FilterDirection getDirection();
+
+    /**
+     * 设置Filter方向
+     * @param direction {@link FilterDirection}
+     */
+    void setDirection(FilterDirection direction);
 }

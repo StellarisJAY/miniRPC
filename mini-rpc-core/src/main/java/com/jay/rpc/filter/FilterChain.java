@@ -17,16 +17,26 @@ import java.util.Queue;
  */
 public class FilterChain {
     /**
-     * 过滤器排序集合，使用PriorityQueue排序
+     * 入站过滤器
      */
-    private static final Queue<Filter> FILTERS = new PriorityQueue<>((f1,f2)->f2.getPriority() - f1.getPriority());
+    private static final Queue<Filter> INBOUND_FILTERS = new PriorityQueue<>((f1, f2)->f2.getPriority() - f1.getPriority());
+
+    /**
+     * 出站过滤器
+     */
+    private static final Queue<Filter> OUTBOUND_FILTERS = new PriorityQueue<>((f1,f2)->f2.getPriority() - f1.getPriority());
 
     /**
      * 添加过滤器
      * @param filter {@link Filter}
      */
     public static void addFilter(Filter filter){
-        FILTERS.offer(filter);
+        switch (filter.getDirection()){
+            case INBOUND: INBOUND_FILTERS.offer(filter);break;
+            case OUTBOUND: OUTBOUND_FILTERS.offer(filter);break;
+            case BOTH: INBOUND_FILTERS.offer(filter);OUTBOUND_FILTERS.offer(filter);break;
+            default:break;
+        }
     }
 
     /**
@@ -35,7 +45,25 @@ public class FilterChain {
      * @return boolean
      */
     public static boolean executeFilterChain(RpcRequest request){
-        for (Filter filter : FILTERS) {
+        for (Filter filter : INBOUND_FILTERS) {
+            if(!filter.filter(request)){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public static boolean executeInboundFilters(RpcRequest request){
+        for (Filter filter : INBOUND_FILTERS) {
+            if(!filter.filter(request)){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public static boolean executeOutboundFilters(RpcRequest request){
+        for (Filter filter : OUTBOUND_FILTERS) {
             if(!filter.filter(request)){
                 return false;
             }
@@ -44,7 +72,10 @@ public class FilterChain {
     }
 
     public static List<Filter> filters(){
-        return new ArrayList<>(FILTERS);
+        List<Filter> filters = new ArrayList<>(INBOUND_FILTERS.size() + OUTBOUND_FILTERS.size());
+        filters.addAll(INBOUND_FILTERS);
+        filters.addAll(OUTBOUND_FILTERS);
+        return filters;
     }
 
 }

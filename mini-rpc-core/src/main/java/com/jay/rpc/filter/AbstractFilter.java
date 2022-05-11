@@ -19,9 +19,10 @@ public abstract class AbstractFilter implements Filter{
      */
     private final Set<String> EXCLUSIONS = new HashSet<>();
     private int priority;
+    private FilterDirection direction;
 
     public AbstractFilter(){
-        this.priority = 100;
+
     }
 
     @Override
@@ -30,7 +31,7 @@ public abstract class AbstractFilter implements Filter{
     }
 
     @Override
-    public boolean filter(RpcRequest request) {
+    public final boolean filter(RpcRequest request) {
         Class<?> type = request.getType();
         int version = request.getVersion();
         String methodName = request.getMethodName();
@@ -42,7 +43,9 @@ public abstract class AbstractFilter implements Filter{
      * @param request {@link RpcRequest}
      * @return boolean
      */
-    public abstract boolean doFilter(RpcRequest request);
+    public boolean doFilter(RpcRequest request){
+        return true;
+    }
 
     @Override
     public final int getPriority(){
@@ -59,4 +62,13 @@ public abstract class AbstractFilter implements Filter{
         this.priority = priority;
     }
 
+    @Override
+    public FilterDirection getDirection() {
+        return direction;
+    }
+
+    @Override
+    public final void setDirection(FilterDirection direction) {
+        this.direction = direction;
+    }
 }

@@ -2,6 +2,7 @@ package com.jay.rpc.metric.prometheus.filter;
 
 import com.jay.rpc.entity.RpcRequest;
 import com.jay.rpc.filter.AbstractFilter;
+import com.jay.rpc.filter.FilterDirection;
 import com.jay.rpc.filter.RpcFilter;
 import com.jay.rpc.util.IpV4Util;
 import io.prometheus.client.Gauge;
@@ -14,7 +15,7 @@ import io.prometheus.client.Gauge;
  * @author Jay
  * @date 2022/04/27 15:35
  */
-@RpcFilter(exclusions = "", priority = Integer.MAX_VALUE - 1)
+@RpcFilter(exclusions = "", priority = Integer.MAX_VALUE - 1, direction = FilterDirection.INBOUND)
 public class PrometheusFilter extends AbstractFilter {
 
     private final Gauge incomingRequestGauge = Gauge.build()
