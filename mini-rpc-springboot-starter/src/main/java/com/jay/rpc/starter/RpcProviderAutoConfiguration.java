@@ -60,6 +60,7 @@ public class RpcProviderAutoConfiguration implements InitializingBean, Applicati
                 try{
                     Filter filter = (Filter) instance;
                     filter.setPriority(annotation.priority());
+                    filter.setDirection(annotation.direction());
                     // 设置exclusions
                     for (String exclusion : exclusions) {
                         filter.addExclusion(exclusion);

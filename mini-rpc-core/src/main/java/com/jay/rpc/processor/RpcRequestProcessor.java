@@ -53,7 +53,7 @@ public class RpcRequestProcessor extends AbstractProcessor {
             byte[] decompressedContent = decompressContent(command.getCompressor(), content);
             RpcRequest request = deserializeRequest(command.getSerializer(), decompressedContent);
             // 执行过滤器链
-            if(executeFilterChain(request)){
+            if(FilterChain.executeInboundFilters(request)){
                 // 处理请求
                 RpcResponse response = processRequest(request);
                 // 创建response
@@ -66,14 +66,6 @@ public class RpcRequestProcessor extends AbstractProcessor {
         sendResponse(context, responseCommand);
     }
 
-    /**
-     * 执行过滤器链
-     * @param request {@link RpcRequest}
-     * @return boolean
-     */
-    private boolean executeFilterChain(RpcRequest request){
-        return FilterChain.executeFilterChain(request);
-    }
 
 
     /**
