@@ -7,6 +7,7 @@ import com.jay.dove.config.DoveConfigs;
 import com.jay.dove.serialize.Serializer;
 import com.jay.dove.serialize.SerializerManager;
 import com.jay.dove.transport.Url;
+import com.jay.dove.transport.callback.InvokeCallback;
 import com.jay.dove.transport.callback.InvokeFuture;
 import com.jay.dove.transport.command.CommandFactory;
 import com.jay.dove.transport.command.RemotingCommand;
@@ -30,10 +31,13 @@ import com.jay.rpc.spi.ExtensionLoader;
 import com.jay.rpc.util.ThreadPoolUtil;
 import lombok.extern.slf4j.Slf4j;
 
+import java.net.ConnectException;
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeoutException;
 import java.util.zip.CRC32;
 
 /**
@@ -81,7 +85,7 @@ public class MiniRpcClient {
         this.localRegistry = new LocalRegistry();
         this.client = new DoveClient(connectionManager, commandFactory);
         // 注册协议
-        ProtocolManager.registerProtocol(RpcProtocol.PROTOCOL_CODE, new RpcProtocol(new ClientSideCommandHandler(this.commandFactory)));
+        ProtocolManager.registerProtocol(RpcProtocol.PROTOCOL_CODE, new RpcProtocol(new ClientSideCommandHandler(this.commandFactory, this.asyncExecutor)));
         // 注册序列化器
         SerializerManager.registerSerializer((byte)1, new ProtostuffSerializer());
         init();
@@ -132,11 +136,18 @@ public class MiniRpcClient {
                     .build();
         }
         url.setExpectedConnectionCount(maxConnections);
-        // 发送请求，获得future
-        InvokeFuture invokeFuture = client.sendFuture(url, requestCommand, null);
-        // 等待结果
-        RpcRemotingCommand responseCommand = (RpcRemotingCommand) invokeFuture.awaitResponse();
-        return processResponse(responseCommand);
+        try{
+            // 发送请求，获得future
+            InvokeFuture invokeFuture = client.sendFuture(url, requestCommand, null);
+            // 等待结果
+            RpcRemotingCommand responseCommand = (RpcRemotingCommand) invokeFuture.awaitResponse();
+            return processResponse(responseCommand);
+        }catch (ConnectException e) {
+            return RpcResponse.builder()
+                    .exception(new RuntimeException("Connect to target url failed, url: " + url.getOriginalUrl()))
+                    .build();
+        }
+
     }
 
     /**
@@ -154,8 +165,14 @@ public class MiniRpcClient {
                     .exception(new RuntimeException("Request blocked by outbound filters"))
                     .build();
         }
-        RpcRemotingCommand response = (RpcRemotingCommand) client.sendSync(url, command, null);
-        return processResponse(response);
+        try{
+            RpcRemotingCommand response = (RpcRemotingCommand) client.sendSync(url, command, null);
+            return processResponse(response);
+        }catch (ConnectException e){
+            return RpcResponse.builder()
+                    .exception(new RuntimeException("Connect to target url failed, url: " + url.getOriginalUrl()))
+                    .build();
+        }
     }
 
     /**
@@ -177,23 +194,12 @@ public class MiniRpcClient {
                 callback.exceptionCaught(new RuntimeException("Request blocked by outbound filters"));
             }
             else{
-                // 发送请求，获得future
-                InvokeFuture invokeFuture = client.sendFuture(url, requestCommand, null);
-                // 异步等待回复
-                asyncExecutor.execute(()->{
-                    try{
-                        // await response
-                        RpcRemotingCommand responseCommand = (RpcRemotingCommand) invokeFuture.awaitResponse();
-                        RpcResponse response = processResponse(responseCommand);
-                        if(response.getException() != null){
-                            throw response.getException();
-                        }
-                        // callback
-                        callback.onResponse(response);
-                    }catch (Throwable throwable){
-                        callback.exceptionCaught(throwable);
-                    }
-                });
+                try{
+                    // 发送请求，获得future
+                    client.sendAsync(url, requestCommand, new RpcInvokeCallback(callback, null));
+                }catch (ConnectException e){
+                    callback.exceptionCaught(new RuntimeException("Connect to target url failed, url: " + url.getOriginalUrl()));
+                }
             }
         }
     }
@@ -213,19 +219,12 @@ public class MiniRpcClient {
                 return future;
             }
             // 发送请求，获得future
-            InvokeFuture invokeFuture = client.sendFuture(url, requestCommand, null);
-            asyncExecutor.execute(()->{
-                try{
-                    RpcRemotingCommand responseCommand = (RpcRemotingCommand) invokeFuture.awaitResponse();
-                    RpcResponse response = processResponse(responseCommand);
-                    if(response.getException() != null){
-                        throw response.getException();
-                    }
-                    future.complete(response);
-                }catch (Throwable throwable){
-                    future.completeExceptionally(throwable);
-                }
-            });
+            try {
+                client.sendAsync(url, requestCommand, new RpcInvokeCallback(null, future));
+            } catch (ConnectException e) {
+                future.completeExceptionally(new RuntimeException("Connect to target url failed, url: " + url.getOriginalUrl()));
+            }
+
         }
         return future;
     }
@@ -297,5 +296,51 @@ public class MiniRpcClient {
         crc.update(content, 0, content.length);
         int value = (int) crc.getValue();
         return value == crc32;
+    }
+
+    class RpcInvokeCallback implements InvokeCallback {
+        AsyncCallback callback;
+        CompletableFuture<RpcResponse> future;
+
+        RpcInvokeCallback(AsyncCallback callback, CompletableFuture<RpcResponse> future) {
+            this.callback = callback;
+            this.future = future;
+        }
+        @Override
+        public void onComplete(RemotingCommand remotingCommand) {
+            RpcResponse response = processResponse((RpcRemotingCommand) remotingCommand);
+            Optional<CompletableFuture<RpcResponse>> optionalFuture = Optional.ofNullable(future);
+            Optional<AsyncCallback> optionalCallback = Optional.ofNullable(callback);
+            Throwable exception = response.getException();
+            if(exception != null){
+                optionalCallback.ifPresent(c->c.exceptionCaught(exception));
+                optionalFuture.ifPresent(f->f.completeExceptionally(exception));
+            }else{
+                callback.onResponse(response);
+                optionalFuture.ifPresent(f->f.complete(response));
+            }
+        }
+
+        @Override
+        public void exceptionCaught(Throwable throwable) {
+            Optional<CompletableFuture<RpcResponse>> optionalFuture = Optional.ofNullable(future);
+            Optional<AsyncCallback> optionalCallback = Optional.ofNullable(callback);
+            optionalCallback.ifPresent(c->c.exceptionCaught(throwable));
+            optionalFuture.ifPresent(f->f.completeExceptionally(throwable));
+        }
+
+        @Override
+        public void onTimeout(RemotingCommand remotingCommand) {
+            Optional<CompletableFuture<RpcResponse>> optionalFuture = Optional.ofNullable(future);
+            Optional<AsyncCallback> optionalCallback = Optional.ofNullable(callback);
+            TimeoutException e = new TimeoutException("Request timeout, request id: " + remotingCommand.getId());
+            optionalCallback.ifPresent(c->c.exceptionCaught(e));
+            optionalFuture.ifPresent(f->f.completeExceptionally(e));
+        }
+
+        @Override
+        public ExecutorService getExecutor() {
+            return asyncExecutor;
+        }
     }
 }
